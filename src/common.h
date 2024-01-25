@@ -1,0 +1,10 @@
+#ifndef CPPLOX_BYTECODE_COMMON_H
+#define CPPLOX_BYTECODE_COMMON_H
+
+
+class common {
+
+};
+
+
+#endif //CPPLOX_BYTECODE_COMMON_H

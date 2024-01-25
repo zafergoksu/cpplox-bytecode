@@ -1,0 +1,59 @@
+# Ignore build folder
+build/
+build_*/
+build-*/
+*-build-*/
+CMakeFiles/
+.cache/
+.idea/
+compile_commands.json
+
+# Ignore .vscode folder
+.vscode/
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+cpp-chat-client_*
+*.exe
+*.out
+*.app
+
+# binary files
+*.bin
+
+# log files
+*.log
+
+# CMake generated files
+CMakeCache.txt
+CPackConfig.cmake
+CPackSourceConfig.cmake
+cmake_install.cmake
+CTestTestfile.cmake
