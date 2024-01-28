@@ -1,7 +1,7 @@
 #include "chunk.h"
 #include "common_types.h"
 #include "debug.h"
-#include <iostream>
+#include "vm.h"
 
 int main() {
     chunk::Chunk chunk;
@@ -12,7 +12,11 @@ int main() {
 
     chunk.write_byte(chunk::OpCode::OP_RETURN, 123);
 
-    disassemble_chunk(chunk, "test chunk");
+    // disassemble_chunk(chunk, "test chunk");
+
+    auto chunk_ptr = std::make_unique<chunk::Chunk>(chunk);
+    vm::VirtualMachine vm{std::move(chunk_ptr)};
+    vm.run();
 
     return 0;
 }
