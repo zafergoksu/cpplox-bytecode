@@ -1,5 +1,4 @@
-#ifndef CPPLOX_BYTECODE_SRC_VM_H
-#define CPPLOX_BYTECODE_SRC_VM_H
+#pragma once
 
 #include "chunk.h"
 #include "common_types.h"
@@ -29,5 +28,3 @@ private:
 };
 
 } // namespace vm
-
-#endif //CPPLOX_BYTECODE_SRC_VM_H

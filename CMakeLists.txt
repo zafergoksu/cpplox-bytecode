@@ -8,6 +8,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(BINARY_NAME cpplox_bytecode)
 set(LIBRARY_NAME cpplox_lib)
 
+option(COMPILE_TESTS "Enable compiling all tests" ON)
+
 include(FetchContent)
 # gtest
 FetchContent_Declare(

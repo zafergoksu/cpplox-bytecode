@@ -1,9 +1,7 @@
-#ifndef CPPLOX_BYTECODE_SRC_CHUNK_H
-#define CPPLOX_BYTECODE_SRC_CHUNK_H
+#pragma once
 
 #include "common_types.h"
 #include "value.h"
-#include <cstdint>
 #include <vector>
 
 namespace chunk {
@@ -28,5 +26,3 @@ private:
     value::ValueArray m_constants;
 };
 } // namespace chunk
-
-#endif //CPPLOX_BYTECODE_SRC_CHUNK_H

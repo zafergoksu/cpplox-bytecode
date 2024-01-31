@@ -1,6 +1,4 @@
 #include "chunk.h"
-#include "memory.h"
-#include "value.h"
 #include "vm.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

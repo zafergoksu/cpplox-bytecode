@@ -7,7 +7,7 @@
 
 namespace {
 usize simple_instruction(const std::string& name, usize offset) {
-    println("{}", "OP_RETURN");
+    println("{}", name);
     return offset + 1;
 }
 

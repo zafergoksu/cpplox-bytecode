@@ -1,9 +1,8 @@
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
 #include "chunk.h"
 #include "common_types.h"
 #include "value.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 using ::testing::ContainerEq;
 

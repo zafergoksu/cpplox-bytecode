@@ -1,5 +1,4 @@
-#ifndef CPPLOX_BYTECODE_SRC_VALUE_H
-#define CPPLOX_BYTECODE_SRC_VALUE_H
+#pragma once
 
 #include "common_types.h"
 #include <vector>
@@ -17,5 +16,3 @@ private:
     std::vector<Value> m_values;
 };
 } // namespace value
-
-#endif //CPPLOX_BYTECODE_SRC_VALUE_H
