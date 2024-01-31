@@ -1,5 +1,5 @@
 #include "chunk.h"
-#include "common_types.h"
+#include "common.h"
 #include "value.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

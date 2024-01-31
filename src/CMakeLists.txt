@@ -1,6 +1,6 @@
 set(LIBRARY_HEADERS
         chunk.h
-        common_types.h
+        common.h
         debug.h
         utility.h
         value.h

@@ -13,3 +13,7 @@ typedef std::int16_t i16;
 typedef std::int32_t i32;
 typedef std::int64_t i64;
 typedef std::ptrdiff_t isize;
+
+#ifndef NDEBUG
+#define DEBUG_TRACE_EXECUTION
+#endif

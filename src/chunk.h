@@ -1,12 +1,17 @@
 #pragma once
 
-#include "common_types.h"
+#include "common.h"
 #include "value.h"
 #include <vector>
 
 namespace chunk {
 enum OpCode : u8 {
     OP_CONSTANT,
+    OP_ADD,
+    OP_SUBTRACT,
+    OP_MULTIPLY,
+    OP_DIVIDE,
+    OP_NEGATE,
     OP_RETURN
 };
 

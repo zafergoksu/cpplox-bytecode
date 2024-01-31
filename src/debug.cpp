@@ -1,6 +1,6 @@
 #include "debug.h"
 #include "chunk.h"
-#include "common_types.h"
+#include "common.h"
 #include "utility.h"
 #include "value.h"
 #include <string>
@@ -20,30 +20,46 @@ usize constant_instruction(const std::string& name, const chunk::Chunk& chunk, u
 }
 } // namespace
 
+usize disassemble_instruction(const chunk::Chunk& chunk, usize offset) {
+    print("{:04d} ", offset);
+    if (offset > 0 && chunk.get_lines().at(offset) == chunk.get_lines().at(offset - 1)) {
+        print("\t| ");
+    } else {
+        print("{:4d} ", chunk.get_lines().at(offset));
+    }
+
+    u8 instruction = chunk.get_code().at(offset);
+    switch (instruction) {
+    case chunk::OpCode::OP_RETURN:
+        offset = ::simple_instruction("OP_RETURN", offset);
+        break;
+    case chunk::OpCode::OP_NEGATE:
+        return simple_instruction("OP_NEGATE", offset);
+    case chunk::OpCode::OP_CONSTANT:
+        offset = ::constant_instruction("OP_CONSTANT", chunk, offset);
+        break;
+    case chunk::OpCode::OP_ADD:
+        return simple_instruction("OP_ADD", offset);
+    case chunk::OpCode::OP_SUBTRACT:
+        return simple_instruction("OP_SUBTRACT", offset);
+    case chunk::OpCode::OP_MULTIPLY:
+        return simple_instruction("OP_MULTIPLY", offset);
+    case chunk::OpCode::OP_DIVIDE:
+        return simple_instruction("OP_DIVIDE", offset);
+    default: {
+        println("Unknown opcode {}", instruction);
+        offset += 1;
+        break;
+    }
+    }
+
+    return offset;
+}
+
 void disassemble_chunk(const chunk::Chunk& chunk, const std::string& name) {
     println("== {} ==", name);
-    for (usize offset = 0; offset < chunk.get_code().size();) {
-        print("{:04d} ", offset);
-
-        if (offset > 0 && chunk.get_lines().at(offset) == chunk.get_lines().at(offset - 1)) {
-            print("\t| ");
-        } else {
-            print("{:4d} ", chunk.get_lines().at(offset));
-        }
-
-        u8 instruction = chunk.get_code().at(offset);
-        switch (instruction) {
-        case chunk::OpCode::OP_RETURN:
-            offset = ::simple_instruction("OP_RETURN", offset);
-            break;
-        case chunk::OpCode::OP_CONSTANT:
-            offset = ::constant_instruction("OP_CONSTANT", chunk, offset);
-            break;
-        default: {
-            println("Unknown opcode {}", instruction);
-            offset += 1;
-            break;
-        }
-        }
+    usize offset = 0;
+    while (offset < chunk.get_code().size()) {
+        offset = disassemble_instruction(chunk, offset);
     }
 }
