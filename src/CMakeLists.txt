@@ -1,13 +1,16 @@
 set(LIBRARY_HEADERS
         chunk.h
-        common_types.h
+        common.h
         debug.h
         utility.h
-        value.h)
+        value.h
+        vm.h)
+
 set(LIBRARY_SOURCES
         chunk.cpp
         debug.cpp
-        value.cpp)
+        value.cpp
+        vm.cpp)
 
 set(LIBRARY_INCLUDES "./")
 

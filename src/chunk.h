@@ -1,14 +1,17 @@
-#ifndef CPPLOX_BYTECODE_SRC_CHUNK_H
-#define CPPLOX_BYTECODE_SRC_CHUNK_H
+#pragma once
 
-#include "common_types.h"
+#include "common.h"
 #include "value.h"
-#include <cstdint>
 #include <vector>
 
 namespace chunk {
 enum OpCode : u8 {
     OP_CONSTANT,
+    OP_ADD,
+    OP_SUBTRACT,
+    OP_MULTIPLY,
+    OP_DIVIDE,
+    OP_NEGATE,
     OP_RETURN
 };
 
@@ -28,5 +31,3 @@ private:
     value::ValueArray m_constants;
 };
 } // namespace chunk
-
-#endif //CPPLOX_BYTECODE_SRC_CHUNK_H

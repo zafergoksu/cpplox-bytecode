@@ -1,5 +1,4 @@
-#ifndef CPPLOX_BYTECODE_SRC_COMMON_TYPES_H
-#define CPPLOX_BYTECODE_SRC_COMMON_TYPES_H
+#pragma once
 
 #include <cstdint>
 
@@ -15,4 +14,6 @@ typedef std::int32_t i32;
 typedef std::int64_t i64;
 typedef std::ptrdiff_t isize;
 
-#endif //CPPLOX_BYTECODE_SRC_COMMON_TYPES_H
+#ifndef NDEBUG
+#define DEBUG_TRACE_EXECUTION
+#endif

@@ -1,10 +1,8 @@
-#ifndef CPPLOX_BYTECODE_SRC_DEBUG_H
-#define CPPLOX_BYTECODE_SRC_DEBUG_H
+#pragma once
 
 #include "chunk.h"
-#include "common_types.h"
+#include "common.h"
 #include <string>
 
+usize disassemble_instruction(const chunk::Chunk&, usize offset);
 void disassemble_chunk(const chunk::Chunk& chunk, const std::string& name);
-
-#endif //CPPLOX_BYTECODE_SRC_DEBUG_H

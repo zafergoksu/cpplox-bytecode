@@ -57,3 +57,4 @@ CPackConfig.cmake
 CPackSourceConfig.cmake
 cmake_install.cmake
 CTestTestfile.cmake
+Testing/
