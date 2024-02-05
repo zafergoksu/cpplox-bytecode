@@ -1,14 +1,20 @@
 set(LIBRARY_HEADERS
         chunk.h
         common.h
+        compiler.h
         debug.h
+        lox.h
+        scanner.h
         utility.h
         value.h
         vm.h)
 
 set(LIBRARY_SOURCES
         chunk.cpp
+        compiler.cpp
         debug.cpp
+        lox.cpp
+        scanner.cpp
         value.cpp
         vm.cpp)
 
