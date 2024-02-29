@@ -23,12 +23,12 @@ protected:
             Token token = m_scanner.scan_token();
             output_tokens.emplace_back(token);
 
-            if (output_tokens.size() > expect_output_size) {
-                return std::nullopt;
+            if (output_tokens.back().get_type() == TokenType::TOKEN_EOF) {
+                break;
             }
 
-            if (output_tokens.back() == Token{TokenType::TOKEN_EOF, "", 1}) {
-                break;
+            if (output_tokens.size() > expect_output_size) {
+                return std::nullopt;
             }
         }
 

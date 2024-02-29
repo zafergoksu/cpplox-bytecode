@@ -19,6 +19,7 @@ private:
     bool is_at_end();
     char advance();
     char peek();
+    char peek_next();
     bool match(char expected);
     void skip_whitespace();
 

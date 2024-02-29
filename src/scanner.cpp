@@ -26,8 +26,7 @@ Token Scanner::scan_token() {
     skip_whitespace();
     m_start = m_current;
     if (is_at_end()) {
-        std::string lexeme = m_source.substr(m_start, m_current);
-        return Token{TokenType::TOKEN_EOF, std::move(lexeme), m_line};
+        return Token{TokenType::TOKEN_EOF, "", m_line};
     }
 
     char c = advance();
@@ -81,6 +80,19 @@ void Scanner::skip_whitespace() {
         case '\t':
             advance();
             break;
+        case '\n': {
+            m_line++;
+            advance();
+        } break;
+        case '/': {
+            if (peek_next() == '/') {
+                while (!is_at_end() && peek() != '\n') {
+                    advance();
+                }
+            } else {
+                return;
+            }
+        }
         default:
             return;
         }
@@ -97,6 +109,13 @@ char Scanner::advance() {
 
 char Scanner::peek() {
     return m_source.at(m_current);
+}
+
+char Scanner::peek_next() {
+    if (m_current + 1 >= m_source.size()) {
+        return '\0';
+    }
+    return m_source.at(m_current + 1);
 }
 
 bool Scanner::match(char expected) {
