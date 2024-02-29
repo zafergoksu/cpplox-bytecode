@@ -23,6 +23,11 @@ private:
     bool match(char expected);
     void skip_whitespace();
 
+    token::Token make_token(token::TokenType token_type);
+    token::Token make_error_token(std::string error_message);
+
+    token::Token string();
+
     std::string m_source;
     usize m_start;
     usize m_current;

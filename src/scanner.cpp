@@ -31,41 +31,67 @@ Token Scanner::scan_token() {
 
     char c = advance();
 
-    std::string lexeme = m_source.substr(m_start, m_current - m_start);
     switch (c) {
     case '(':
-        return Token{TokenType::TOKEN_LEFT_PAREN, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_LEFT_PAREN);
     case ')':
-        return Token{TokenType::TOKEN_RIGHT_PAREN, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_RIGHT_PAREN);
     case '{':
-        return Token{TokenType::TOKEN_LEFT_BRACE, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_LEFT_BRACE);
     case '}':
-        return Token{TokenType::TOKEN_RIGHT_BRACE, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_RIGHT_BRACE);
     case ';':
-        return Token{TokenType::TOKEN_SEMICOLON, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_SEMICOLON);
     case ',':
-        return Token{TokenType::TOKEN_COMMA, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_COMMA);
     case '.':
-        return Token{TokenType::TOKEN_DOT, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_DOT);
     case '-':
-        return Token{TokenType::TOKEN_MINUS, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_MINUS);
     case '+':
-        return Token{TokenType::TOKEN_PLUS, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_PLUS);
     case '/':
-        return Token{TokenType::TOKEN_SLASH, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_SLASH);
     case '*':
-        return Token{TokenType::TOKEN_STAR, std::move(lexeme), m_line};
+        return make_token(TokenType::TOKEN_STAR);
     case '!':
-        return Token{match('=') ? TokenType::TOKEN_BANG_EQUAL : TokenType::TOKEN_BANG, m_source.substr(m_start, m_current - m_start), m_line};
+        return make_token(match('=') ? TokenType::TOKEN_BANG_EQUAL : TokenType::TOKEN_BANG);
     case '=':
-        return Token{match('=') ? TokenType::TOKEN_EQUAL_EQUAL : TokenType::TOKEN_EQUAL, m_source.substr(m_start, m_current - m_start), m_line};
+        return make_token(match('=') ? TokenType::TOKEN_EQUAL_EQUAL : TokenType::TOKEN_EQUAL);
     case '<':
-        return Token{match('=') ? TokenType::TOKEN_LESS_EQUAL : TokenType::TOKEN_LESS, m_source.substr(m_start, m_current - m_start), m_line};
+        return make_token(match('=') ? TokenType::TOKEN_LESS_EQUAL : TokenType::TOKEN_LESS);
     case '>':
-        return Token{match('=') ? TokenType::TOKEN_GREATER_EQUAL : TokenType::TOKEN_GREATER, m_source.substr(m_start, m_current - m_start), m_line};
+        return make_token(match('=') ? TokenType::TOKEN_GREATER_EQUAL : TokenType::TOKEN_GREATER);
+    case '"':
+        return string();
     }
 
-    return Token{TokenType::TOKEN_ERROR, "Unexpected character.", m_line};
+    return make_error_token("Unexpected character.");
+}
+
+Token Scanner::make_token(TokenType token_type) {
+    return Token{token_type, m_source.substr(m_start, m_current - m_start), m_line};
+}
+
+Token Scanner::make_error_token(std::string error_message) {
+    return Token{TokenType::TOKEN_ERROR, std::move(error_message), m_line};
+}
+
+Token Scanner::string() {
+    while (!is_at_end() && peek() != '"') {
+        if (peek() == '\n') {
+            m_line++;
+        }
+        advance();
+    }
+
+    if (is_at_end()) {
+        return make_error_token("Unterminated string.");
+    }
+
+    // consume closing quote
+    advance();
+    return make_token(TokenType::TOKEN_STRING);
 }
 
 void Scanner::skip_whitespace() {
