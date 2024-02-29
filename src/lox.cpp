@@ -1,5 +1,6 @@
 #include "lox.h"
 #include "compiler.h"
+#include "scanner.h"
 #include "utility.h"
 #include "vm.h"
 #include <fstream>
@@ -7,10 +8,15 @@
 #include <string>
 #include <utility>
 
+using namespace compiler;
+using namespace scanner;
+
 namespace lox {
 
-vm::InterpretResult interpret(std::string&& source) {
-    compiler::compile(std::move(source));
+vm::InterpretResult interpret(std::string source) {
+    Scanner scanner{std::move(source)};
+    Compiler compiler{std::move(scanner)};
+    compiler.compile();
     return vm::InterpretResult::INTERPRET_OK;
 }
 

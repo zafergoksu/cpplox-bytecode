@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "token.h"
 
 #include <string>
 
@@ -8,13 +9,23 @@ namespace scanner {
 
 class Scanner {
 public:
-    Scanner(std::string source);
+    Scanner();
+    explicit Scanner(std::string source);
+
+    void load_source(std::string source);
+    token::Token scan_token();
 
 private:
-    usize m_start_idx;
-    usize m_current_idx;
-    usize m_line;
+    bool is_at_end();
+    char advance();
+    char peek();
+    bool match(char expected);
+    void skip_whitespace();
+
     std::string m_source;
+    usize m_start;
+    usize m_current;
+    usize m_line;
 };
 
 } // namespace scanner

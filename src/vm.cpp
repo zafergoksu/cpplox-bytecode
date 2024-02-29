@@ -83,7 +83,7 @@ Value VirtualMachine::read_constant() {
 }
 
 void VirtualMachine::push(Value value) {
-    m_stack.emplace_back(std::move(value));
+    m_stack.emplace_back(value);
 }
 
 const Value& VirtualMachine::peek_stack_top() const {

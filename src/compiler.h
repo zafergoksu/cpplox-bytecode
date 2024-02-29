@@ -1,7 +1,15 @@
 #pragma once
 
-#include <string>
+#include "scanner.h"
 
 namespace compiler {
-void compile(std::string&& source);
+class Compiler {
+public:
+    explicit Compiler(scanner::Scanner scanner);
+
+    void compile();
+
+private:
+    scanner::Scanner m_scanner;
+};
 } // namespace compiler
