@@ -3,14 +3,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace {
-} // namespace
-
 class VirtualMachineTest : public ::testing::Test {
 protected:
-    ~VirtualMachineTest() = default;
+    ~VirtualMachineTest() override = default;
 
-    std::unique_ptr<chunk::Chunk> simple_constant_program() {
+    static std::unique_ptr<chunk::Chunk> simple_constant_program() {
         auto chunk = std::make_unique<chunk::Chunk>();
 
         usize constant_idx = chunk->write_constant(1.2);
@@ -21,7 +18,7 @@ protected:
         return chunk;
     }
 
-    std::unique_ptr<chunk::Chunk> binary_op_program(value::Value lhs, value::Value rhs, chunk::OpCode op_code) {
+    static std::unique_ptr<chunk::Chunk> binary_op_program(value::Value lhs, value::Value rhs, chunk::OpCode op_code) {
         auto chunk = std::make_unique<chunk::Chunk>();
 
         usize constant_idx = chunk->write_constant(lhs);
