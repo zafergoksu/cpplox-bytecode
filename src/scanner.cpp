@@ -111,15 +111,15 @@ Token Scanner::make_error_token(std::string error_message) {
 }
 
 Token Scanner::number() {
-    while (!is_at_end() && is_digit(peek())) {
+    while (is_digit(peek())) {
         advance();
     }
 
     // Look for fractional part
-    if (!is_at_end() && peek() == '.' && is_digit(peek_next())) {
+    if (peek() == '.' && is_digit(peek_next())) {
         advance();
 
-        while (!is_at_end() && is_digit(peek())) {
+        while (is_digit(peek())) {
             advance();
         }
     }
@@ -128,7 +128,7 @@ Token Scanner::number() {
 }
 
 Token Scanner::identifier() {
-    while (!is_at_end() && (is_alpha(peek()) || is_digit(peek()))) {
+    while (is_alpha(peek()) || is_digit(peek())) {
         advance();
     }
 
@@ -161,9 +161,6 @@ Token Scanner::string() {
 
 void Scanner::skip_whitespace() {
     while (true) {
-        if (is_at_end()) {
-            return;
-        }
         char c = peek();
         switch (c) {
         case ' ':
@@ -199,11 +196,14 @@ char Scanner::advance() {
 }
 
 char Scanner::peek() {
+    if (is_at_end()) {
+        return '\0';
+    }
     return m_source.at(m_current);
 }
 
 char Scanner::peek_next() {
-    if (m_current + 1 >= m_source.size()) {
+    if (m_current > m_source.size() - 2) {
         return '\0';
     }
     return m_source.at(m_current + 1);
