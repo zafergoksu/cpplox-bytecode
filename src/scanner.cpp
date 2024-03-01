@@ -1,11 +1,36 @@
 #include "scanner.h"
 #include "token.h"
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 using namespace token;
 
 namespace scanner {
+
+/*
+ * We could use a trie for mapping keywords as we can disregard any keyword
+ * searches that do not begin with a beginning character in this list.
+ * However, std::unordered_map is fast enough for retrieving token types.
+*/
+static std::unordered_map<std::string, TokenType> token_mapping{
+    {"and", TokenType::TOKEN_AND},
+    {"class", TokenType::TOKEN_CLASS},
+    {"else", TokenType::TOKEN_ELSE},
+    {"if", TokenType::TOKEN_IF},
+    {"nil", TokenType::TOKEN_NIL},
+    {"or", TokenType::TOKEN_OR},
+    {"print", TokenType::TOKEN_PRINT},
+    {"return", TokenType::TOKEN_RETURN},
+    {"super", TokenType::TOKEN_SUPER},
+    {"var", TokenType::TOKEN_VAR},
+    {"while", TokenType::TOKEN_WHILE},
+    {"false", TokenType::TOKEN_FALSE},
+    {"for", TokenType::TOKEN_FOR},
+    {"fun", TokenType::TOKEN_FUN},
+    {"this", TokenType::TOKEN_THIS},
+    {"true", TokenType::TOKEN_TRUE},
+};
 
 Scanner::Scanner()
     : m_start{0},
@@ -30,6 +55,14 @@ Token Scanner::scan_token() {
     }
 
     char c = advance();
+
+    if (is_alpha(c)) {
+        return identifier();
+    }
+
+    if (is_digit(c)) {
+        return number();
+    }
 
     switch (c) {
     case '(':
@@ -75,6 +108,38 @@ Token Scanner::make_token(TokenType token_type) {
 
 Token Scanner::make_error_token(std::string error_message) {
     return Token{TokenType::TOKEN_ERROR, std::move(error_message), m_line};
+}
+
+Token Scanner::number() {
+    while (!is_at_end() && is_digit(peek())) {
+        advance();
+    }
+
+    // Look for fractional part
+    if (!is_at_end() && peek() == '.' && is_digit(peek_next())) {
+        advance();
+
+        while (!is_at_end() && is_digit(peek())) {
+            advance();
+        }
+    }
+
+    return make_token(TokenType::TOKEN_NUMBER);
+}
+
+Token Scanner::identifier() {
+    while (!is_at_end() && (is_alpha(peek()) || is_digit(peek()))) {
+        advance();
+    }
+
+    std::string lexeme = m_source.substr(m_start, m_current - m_start);
+
+    auto iter = token_mapping.find(lexeme);
+    if (iter != token_mapping.end()) {
+        return make_token(iter->second);
+    }
+
+    return make_token(TokenType::TOKEN_IDENTIFIER);
 }
 
 Token Scanner::string() {
@@ -142,6 +207,14 @@ char Scanner::peek_next() {
         return '\0';
     }
     return m_source.at(m_current + 1);
+}
+
+bool Scanner::is_alpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
+bool Scanner::is_digit(char c) {
+    return c >= '0' && c <= '9';
 }
 
 bool Scanner::match(char expected) {
