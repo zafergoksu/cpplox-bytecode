@@ -19,7 +19,7 @@ VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
     m_stack.reserve(256);
 }
 
-void VirtualMachine::load_new_chunk(std::unique_ptr<chunk::Chunk> chunk) {
+void VirtualMachine::load_new_chunk(std::shared_ptr<chunk::Chunk> chunk) {
     m_chunk = std::move(chunk);
     m_ip = 0;
 }

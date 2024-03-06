@@ -1,26 +1,36 @@
 #include "lox.h"
+#include "chunk.h"
 #include "compiler.h"
 #include "scanner.h"
 #include "utility.h"
 #include "vm.h"
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <utility>
 
 using namespace compiler;
 using namespace scanner;
+using namespace chunk;
 
 namespace lox {
 
-vm::InterpretResult interpret(std::string source) {
+vm::InterpretResult interpret(std::string source, vm::VirtualMachine& vm) {
     Scanner scanner{std::move(source)};
     Compiler compiler{std::move(scanner)};
-    compiler.compile();
+
+    auto chunk = std::make_shared<Chunk>();
+    if (!compiler.compile(chunk)) {
+        return vm::InterpretResult::INTERPRET_COMPILE_ERROR;
+    }
+
+    vm.load_new_chunk(chunk);
+
     return vm::InterpretResult::INTERPRET_OK;
 }
 
-void run_file(const std::string& path) {
+void run_file(const std::string& path, vm::VirtualMachine& vm) {
     std::ifstream input_file{path, std::ios::binary};
 
     if (!input_file.is_open()) {
@@ -29,7 +39,7 @@ void run_file(const std::string& path) {
     }
 
     std::string source{std::istreambuf_iterator<char>(input_file), std::istreambuf_iterator<char>()};
-    vm::InterpretResult result = interpret(std::move(source));
+    vm::InterpretResult result = interpret(std::move(source), vm);
 
     if (result == vm::InterpretResult::INTERPRET_COMPILE_ERROR) {
         exit(65);
@@ -40,7 +50,7 @@ void run_file(const std::string& path) {
     }
 }
 
-void repl() {
+void repl(vm::VirtualMachine& vm) {
     std::string line;
 
     while (true) {
@@ -51,15 +61,16 @@ void repl() {
             println("");
             break;
         }
-        interpret(std::move(line));
+        interpret(std::move(line), vm);
     }
 }
 
 void startup(int argc, const char* argv[]) {
+    vm::VirtualMachine vm;
     if (argc == 1) {
-        repl();
+        repl(vm);
     } else if (argc == 2) {
-        run_file(argv[1]);
+        run_file(argv[1], vm);
     } else {
         println("Usage: clox [path]");
         exit(64);

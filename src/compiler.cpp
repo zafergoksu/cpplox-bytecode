@@ -1,18 +1,19 @@
 #include "compiler.h"
-#include "common.h"
+#include "chunk.h"
 #include "scanner.h"
-#include "token.h"
 #include "utility.h"
+#include <memory>
 #include <utility>
 
 using namespace token;
+using namespace chunk;
 
 namespace compiler {
 
 Compiler::Compiler(scanner::Scanner scanner)
     : m_scanner(std::move(scanner)) {}
 
-void Compiler::compile() {
+bool Compiler::compile(std::shared_ptr<Chunk> chunk) {
     usize line = -1;
 
     while (true) {
@@ -30,6 +31,7 @@ void Compiler::compile() {
             break;
         }
     }
+    return true;
 }
 
 } // namespace compiler
