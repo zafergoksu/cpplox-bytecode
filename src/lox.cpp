@@ -17,15 +17,16 @@ using namespace chunk;
 namespace lox {
 
 vm::InterpretResult interpret(std::string source, vm::VirtualMachine& vm) {
-    Scanner scanner{std::move(source)};
-    Compiler compiler{std::move(scanner)};
-
+    auto scanner = std::make_shared<Scanner>(std::move(source));
     auto chunk = std::make_shared<Chunk>();
-    if (!compiler.compile(chunk)) {
+    Compiler compiler{scanner, chunk};
+
+    if (!compiler.compile()) {
         return vm::InterpretResult::INTERPRET_COMPILE_ERROR;
     }
 
     vm.load_new_chunk(chunk);
+    vm.run();
 
     return vm::InterpretResult::INTERPRET_OK;
 }
