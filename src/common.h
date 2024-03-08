@@ -16,4 +16,5 @@ typedef std::ptrdiff_t isize;
 
 #ifndef NDEBUG
 #define DEBUG_TRACE_EXECUTION
+#define DEBUG_PRINT_CODE
 #endif

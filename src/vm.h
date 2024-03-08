@@ -25,7 +25,7 @@ public:
     InterpretResult run();
     InterpretResult run_step();
     [[nodiscard]] usize get_ip() const;
-    void load_new_chunk(std::unique_ptr<chunk::Chunk> chunk);
+    void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk);
     const value::Value& peek_stack_top() const;
 
 private:
@@ -39,7 +39,7 @@ private:
     inline void binary_multiply_op();
     inline void binary_divide_op();
 
-    std::unique_ptr<chunk::Chunk> m_chunk;
+    std::shared_ptr<const chunk::Chunk> m_chunk;
     usize m_ip;
     std::vector<value::Value> m_stack;
 };
