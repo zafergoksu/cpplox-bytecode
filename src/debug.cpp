@@ -3,7 +3,11 @@
 #include "common.h"
 #include "utility.h"
 #include "value.h"
+#include <cstddef>
+#include <iostream>
+#include <sstream>
 #include <string>
+#include <variant>
 
 namespace {
 usize simple_instruction(const std::string& name, usize offset) {
@@ -14,8 +18,20 @@ usize simple_instruction(const std::string& name, usize offset) {
 usize constant_instruction(const std::string& name, const chunk::Chunk& chunk, usize offset) {
     u8 constant = chunk.get_code().at(offset + 1);
     print("{:16s} {:4d} '", name, constant);
+
     auto value = chunk.get_constants().get_values().at(constant);
-    println("{:g}'", value);
+    if (std::holds_alternative<bool>(value)) {
+        println("{}", std::get<bool>(value));
+    }
+
+    if (std::holds_alternative<std::nullptr_t>(value)) {
+        println("nil");
+    }
+
+    if (std::holds_alternative<double>(value)) {
+        println("{:g}'", std::get<double>(value));
+    }
+
     return offset + 2;
 }
 } // namespace

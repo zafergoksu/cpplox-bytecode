@@ -33,11 +33,11 @@ private:
     value::Value read_constant();
     void push(value::Value value);
     value::Value pop();
-    inline std::pair<value::Value, value::Value> pop_binary_operands();
-    inline void binary_add_op();
-    inline void binary_subtract_op();
-    inline void binary_multiply_op();
-    inline void binary_divide_op();
+    inline InterpretResult pop_binary_operands(double& lhs, double& rhs);
+    inline InterpretResult binary_add_op();
+    inline InterpretResult binary_subtract_op();
+    inline InterpretResult binary_multiply_op();
+    inline InterpretResult binary_divide_op();
 
     std::shared_ptr<const chunk::Chunk> m_chunk;
     usize m_ip;

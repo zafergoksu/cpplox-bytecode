@@ -97,7 +97,7 @@ TEST_F(CompilerTest, test_grouping) {
         OpCode::OP_MULTIPLY,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{5, 123, 1};
+    std::vector<value::Value> expect_constants{5.0, 123.0, 1.0};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
@@ -124,7 +124,7 @@ TEST_F(CompilerTest, test_unary_negation) {
         OpCode::OP_NEGATE,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{123};
+    std::vector<value::Value> expect_constants{123.0};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
@@ -156,7 +156,7 @@ TEST_F(CompilerTest, test_arithmetic_ops) {
         OpCode::OP_ADD,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{1, 4, 3};
+    std::vector<value::Value> expect_constants{1.0, 4.0, 3.0};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());

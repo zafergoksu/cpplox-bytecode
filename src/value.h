@@ -1,10 +1,23 @@
 #pragma once
 
 #include "common.h"
+#include <cstddef>
+#include <ostream>
+#include <variant>
 #include <vector>
 
 namespace value {
-typedef double Value;
+
+using Value = std::variant<
+    // nil type
+    std::nullptr_t,
+
+    // Primitive types
+    bool,
+    double>;
+
+std::ostream& operator<<(std::ostream&, const Value& value);
+std::string value_to_string(const Value& value);
 
 class ValueArray {
 public:

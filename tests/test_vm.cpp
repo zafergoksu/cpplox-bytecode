@@ -2,6 +2,7 @@
 #include "vm.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <variant>
 
 class VirtualMachineTest : public ::testing::Test {
 protected:
@@ -93,7 +94,7 @@ TEST_F(VirtualMachineTest, test_unary_op_negate) {
     m_vm.run_step();
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(m_vm.peek_stack_top(), -2.0);
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), -2.0);
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
@@ -106,7 +107,7 @@ TEST_F(VirtualMachineTest, test_binary_op_add) {
     m_vm.run_step();
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(m_vm.peek_stack_top(), 4.6);
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.6);
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
@@ -119,7 +120,7 @@ TEST_F(VirtualMachineTest, test_binary_op_subtract) {
     m_vm.run_step();
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(m_vm.peek_stack_top(), 4.6);
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.6);
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
@@ -132,7 +133,7 @@ TEST_F(VirtualMachineTest, test_binary_op_multiply) {
     m_vm.run_step();
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(m_vm.peek_stack_top(), 4.5);
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.5);
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
@@ -145,7 +146,7 @@ TEST_F(VirtualMachineTest, test_binary_op_divide) {
     m_vm.run_step();
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(m_vm.peek_stack_top(), 5.0);
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 5.0);
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
