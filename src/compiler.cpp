@@ -111,6 +111,23 @@ void Compiler::number() {
     emit_constant(value);
 }
 
+void Compiler::literal() {
+    switch (m_parser.m_previous.get_type()) {
+    case TokenType::TOKEN_FALSE:
+        emit_byte(OpCode::OP_FALSE);
+        break;
+    case TokenType::TOKEN_NIL:
+        emit_byte(OpCode::OP_NIL);
+        break;
+    case TokenType::TOKEN_TRUE:
+        emit_byte(OpCode::OP_TRUE);
+        break;
+    default:
+        // Unreachable
+        return;
+    }
+}
+
 void Compiler::consume(TokenType token_type, const std::string& message) {
     if (m_parser.m_current.get_type() == token_type) {
         advance();

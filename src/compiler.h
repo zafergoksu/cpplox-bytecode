@@ -54,6 +54,7 @@ private:
     void unary();
     void number();
     void binary();
+    void literal();
     void consume(token::TokenType token_type, const std::string& message);
     void parse_precedence(Precedence precedence);
     const ParseRule& get_rule(token::TokenType token_type);
@@ -99,17 +100,17 @@ private:
         {token::TokenType::TOKEN_AND, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_CLASS, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_ELSE, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
-        {token::TokenType::TOKEN_FALSE, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_FALSE, {std::bind(&Compiler::literal, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_FOR, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_FUN, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_IF, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
-        {token::TokenType::TOKEN_NIL, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_NIL, {std::bind(&Compiler::literal, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_OR, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_PRINT, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_RETURN, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_SUPER, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_THIS, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
-        {token::TokenType::TOKEN_TRUE, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_TRUE, {std::bind(&Compiler::literal, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_VAR, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_WHILE, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_ERROR, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},

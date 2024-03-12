@@ -47,6 +47,15 @@ InterpretResult VirtualMachine::run_step() {
         push(constant);
         break;
     }
+    case OP_NIL:
+        push(nullptr);
+        break;
+    case OP_TRUE:
+        push(true);
+        break;
+    case OP_FALSE:
+        push(false);
+        break;
     case OP_ADD:
         binary_add_op();
         break;

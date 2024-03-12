@@ -4,10 +4,10 @@
 #include "utility.h"
 #include "value.h"
 #include <cstddef>
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <variant>
+
+using namespace chunk;
 
 namespace {
 usize simple_instruction(const std::string& name, usize offset) {
@@ -15,28 +15,19 @@ usize simple_instruction(const std::string& name, usize offset) {
     return offset + 1;
 }
 
-usize constant_instruction(const std::string& name, const chunk::Chunk& chunk, usize offset) {
+usize constant_instruction(const std::string& name, const Chunk& chunk, usize offset) {
     u8 constant = chunk.get_code().at(offset + 1);
     print("{:16s} {:4d} '", name, constant);
 
     auto value = chunk.get_constants().get_values().at(constant);
-    if (std::holds_alternative<bool>(value)) {
-        println("{}", std::get<bool>(value));
-    }
-
-    if (std::holds_alternative<std::nullptr_t>(value)) {
-        println("nil");
-    }
-
-    if (std::holds_alternative<double>(value)) {
-        println("{:g}'", std::get<double>(value));
-    }
+    std::visit(value::print_visitor{}, value);
+    println("'");
 
     return offset + 2;
 }
 } // namespace
 
-usize disassemble_instruction(const chunk::Chunk& chunk, usize offset) {
+usize disassemble_instruction(const Chunk& chunk, usize offset) {
     print("{:04d} ", offset);
     if (offset > 0 && chunk.get_lines().at(offset) == chunk.get_lines().at(offset - 1)) {
         print("\t| ");
@@ -46,21 +37,27 @@ usize disassemble_instruction(const chunk::Chunk& chunk, usize offset) {
 
     u8 instruction = chunk.get_code().at(offset);
     switch (instruction) {
-    case chunk::OpCode::OP_RETURN:
+    case OpCode::OP_RETURN:
         offset = ::simple_instruction("OP_RETURN", offset);
         break;
-    case chunk::OpCode::OP_NEGATE:
+    case OpCode::OP_NEGATE:
         return simple_instruction("OP_NEGATE", offset);
-    case chunk::OpCode::OP_CONSTANT:
+    case OpCode::OP_CONSTANT:
         offset = ::constant_instruction("OP_CONSTANT", chunk, offset);
         break;
-    case chunk::OpCode::OP_ADD:
+    case OpCode::OP_NIL:
+        return simple_instruction("OP_NIL", offset);
+    case OpCode::OP_TRUE:
+        return simple_instruction("OP_TRUE", offset);
+    case OpCode::OP_FALSE:
+        return simple_instruction("OP_FALSE", offset);
+    case OpCode::OP_ADD:
         return simple_instruction("OP_ADD", offset);
-    case chunk::OpCode::OP_SUBTRACT:
+    case OpCode::OP_SUBTRACT:
         return simple_instruction("OP_SUBTRACT", offset);
-    case chunk::OpCode::OP_MULTIPLY:
+    case OpCode::OP_MULTIPLY:
         return simple_instruction("OP_MULTIPLY", offset);
-    case chunk::OpCode::OP_DIVIDE:
+    case OpCode::OP_DIVIDE:
         return simple_instruction("OP_DIVIDE", offset);
     default: {
         println("Unknown opcode {}", instruction);
@@ -72,7 +69,7 @@ usize disassemble_instruction(const chunk::Chunk& chunk, usize offset) {
     return offset;
 }
 
-void disassemble_chunk(const chunk::Chunk& chunk, const std::string& name) {
+void disassemble_chunk(const Chunk& chunk, const std::string& name) {
     println("== {} ==", name);
     usize offset = 0;
     while (offset < chunk.get_code().size()) {

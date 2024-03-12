@@ -19,6 +19,18 @@ using Value = std::variant<
 std::ostream& operator<<(std::ostream&, const Value& value);
 std::string value_to_string(const Value& value);
 
+struct value_to_string_visitor {
+    std::string operator()(std::nullptr_t);
+    std::string operator()(bool value);
+    std::string operator()(double value);
+};
+
+struct print_visitor {
+    void operator()(std::nullptr_t);
+    void operator()(bool value);
+    void operator()(double value);
+};
+
 class ValueArray {
 public:
     [[nodiscard]] usize size() const;

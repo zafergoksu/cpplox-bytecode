@@ -7,6 +7,11 @@
 namespace chunk {
 enum OpCode : u8 {
     OP_CONSTANT,
+    // dedicated op codes for nil, and boolean values
+    // to push on stack rather than emit constants
+    OP_NIL,
+    OP_TRUE,
+    OP_FALSE,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
