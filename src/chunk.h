@@ -7,10 +7,21 @@
 namespace chunk {
 enum OpCode : u8 {
     OP_CONSTANT,
+    // dedicated op codes for nil, and boolean values
+    // to push on stack rather than emit constants
+    OP_NIL,
+    OP_TRUE,
+    OP_FALSE,
+    // we can optimize performance by creating dedicated
+    // instructions for other side of equality operators
+    OP_EQUAL,
+    OP_GREATER,
+    OP_LESS,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
+    OP_NOT,
     OP_NEGATE,
     OP_RETURN
 };

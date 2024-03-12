@@ -3,6 +3,7 @@
 #include "value.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <variant>
 
 using ::testing::ContainerEq;
 
@@ -28,7 +29,7 @@ TEST(Chunk, test_write_constant) {
     chunk.write_byte(constant_idx, 123);
 
     EXPECT_EQ(constant_idx, 0);
-    EXPECT_EQ(chunk.get_constants().get_values().at(constant_idx), constant_value);
+    EXPECT_EQ(std::get<double>(chunk.get_constants().get_values().at(constant_idx)), constant_value);
 }
 
 int main(int ac, char* av[]) {

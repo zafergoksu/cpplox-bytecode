@@ -61,6 +61,9 @@ void Compiler::unary() {
 
     // Emit the operator instruction
     switch (operator_type) {
+    case TokenType::TOKEN_BANG:
+        emit_byte(OpCode::OP_NOT);
+        break;
     case TokenType::TOKEN_MINUS:
         emit_byte(OpCode::OP_NEGATE);
         break;
@@ -76,6 +79,24 @@ void Compiler::binary() {
     parse_precedence(current_precedence);
 
     switch (operator_type) {
+    case TokenType::TOKEN_BANG_EQUAL:
+        emit_bytes(OpCode::OP_EQUAL, OpCode::OP_NOT);
+        break;
+    case TokenType::TOKEN_EQUAL_EQUAL:
+        emit_byte(OpCode::OP_EQUAL);
+        break;
+    case TokenType::TOKEN_GREATER:
+        emit_byte(OpCode::OP_GREATER);
+        break;
+    case TokenType::TOKEN_GREATER_EQUAL:
+        emit_bytes(OpCode::OP_LESS, OP_NOT);
+        break;
+    case TokenType::TOKEN_LESS:
+        emit_byte(OpCode::OP_LESS);
+        break;
+    case TokenType::TOKEN_LESS_EQUAL:
+        emit_bytes(OpCode::OP_GREATER, OP_NOT);
+        break;
     case TokenType::TOKEN_PLUS:
         emit_byte(OpCode::OP_ADD);
         break;
@@ -109,6 +130,23 @@ void Compiler::advance() {
 void Compiler::number() {
     Value value = std::stod(m_parser.m_previous.get_lexeme());
     emit_constant(value);
+}
+
+void Compiler::literal() {
+    switch (m_parser.m_previous.get_type()) {
+    case TokenType::TOKEN_FALSE:
+        emit_byte(OpCode::OP_FALSE);
+        break;
+    case TokenType::TOKEN_NIL:
+        emit_byte(OpCode::OP_NIL);
+        break;
+    case TokenType::TOKEN_TRUE:
+        emit_byte(OpCode::OP_TRUE);
+        break;
+    default:
+        // Unreachable
+        return;
+    }
 }
 
 void Compiler::consume(TokenType token_type, const std::string& message) {

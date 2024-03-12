@@ -34,6 +34,22 @@ protected:
         return "1 + 4 * 3";
     }
 
+    static std::string test_boolean_values() {
+        return "true";
+    }
+
+    static std::string test_nil_value() {
+        return "nil";
+    }
+
+    static std::string test_not_op() {
+        return "!true";
+    }
+
+    static std::string test_equality_op() {
+        return "true != false";
+    }
+
     void setup_compiler(std::string source) {
         m_scanner->load_source(std::move(source));
     }
@@ -97,7 +113,7 @@ TEST_F(CompilerTest, test_grouping) {
         OpCode::OP_MULTIPLY,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{5, 123, 1};
+    std::vector<value::Value> expect_constants{5.0, 123.0, 1.0};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
@@ -124,7 +140,7 @@ TEST_F(CompilerTest, test_unary_negation) {
         OpCode::OP_NEGATE,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{123};
+    std::vector<value::Value> expect_constants{123.0};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
@@ -156,7 +172,111 @@ TEST_F(CompilerTest, test_arithmetic_ops) {
         OpCode::OP_ADD,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{1, 4, 3};
+    std::vector<value::Value> expect_constants{1.0, 4.0, 3.0};
+
+    EXPECT_EQ(result, true);
+    EXPECT_EQ(out_size, expect_bytes.size());
+    EXPECT_THAT(out_bytes, Eq(expect_bytes));
+    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
+}
+
+TEST_F(CompilerTest, test_boolean_values) {
+    setup_compiler(test_boolean_values());
+
+    if (!scanner_and_chunk_are_valid()) {
+        FAIL() << "Scanner and chunk are not valid pointers";
+    }
+
+    bool result = m_compiler.compile();
+
+    auto out_size = m_current_chunk->size();
+    auto out_bytes = m_current_chunk->get_code();
+    auto out_constants = m_current_chunk->get_constants();
+
+    std::vector<u8> expect_bytes{
+        OpCode::OP_TRUE,
+        OpCode::OP_RETURN};
+
+    std::vector<value::Value> expect_constants{};
+
+    EXPECT_EQ(result, true);
+    EXPECT_EQ(out_size, expect_bytes.size());
+    EXPECT_THAT(out_bytes, Eq(expect_bytes));
+    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
+}
+
+TEST_F(CompilerTest, test_nil_value) {
+    setup_compiler(test_nil_value());
+
+    if (!scanner_and_chunk_are_valid()) {
+        FAIL() << "Scanner and chunk are not valid pointers";
+    }
+
+    bool result = m_compiler.compile();
+
+    auto out_size = m_current_chunk->size();
+    auto out_bytes = m_current_chunk->get_code();
+    auto out_constants = m_current_chunk->get_constants();
+
+    std::vector<u8> expect_bytes{
+        OpCode::OP_NIL,
+        OpCode::OP_RETURN};
+
+    std::vector<value::Value> expect_constants{};
+
+    EXPECT_EQ(result, true);
+    EXPECT_EQ(out_size, expect_bytes.size());
+    EXPECT_THAT(out_bytes, Eq(expect_bytes));
+    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
+}
+
+TEST_F(CompilerTest, test_not_op) {
+    setup_compiler(test_not_op());
+
+    if (!scanner_and_chunk_are_valid()) {
+        FAIL() << "Scanner and chunk are not valid pointers";
+    }
+
+    bool result = m_compiler.compile();
+
+    auto out_size = m_current_chunk->size();
+    auto out_bytes = m_current_chunk->get_code();
+    auto out_constants = m_current_chunk->get_constants();
+
+    std::vector<u8> expect_bytes{
+        OpCode::OP_TRUE,
+        OpCode::OP_NOT,
+        OpCode::OP_RETURN};
+
+    std::vector<value::Value> expect_constants{};
+
+    EXPECT_EQ(result, true);
+    EXPECT_EQ(out_size, expect_bytes.size());
+    EXPECT_THAT(out_bytes, Eq(expect_bytes));
+    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
+}
+
+TEST_F(CompilerTest, test_equality_op) {
+    setup_compiler(test_equality_op());
+
+    if (!scanner_and_chunk_are_valid()) {
+        FAIL() << "Scanner and chunk are not valid pointers";
+    }
+
+    bool result = m_compiler.compile();
+
+    auto out_size = m_current_chunk->size();
+    auto out_bytes = m_current_chunk->get_code();
+    auto out_constants = m_current_chunk->get_constants();
+
+    std::vector<u8> expect_bytes{
+        OpCode::OP_TRUE,
+        OpCode::OP_FALSE,
+        OpCode::OP_EQUAL,
+        OpCode::OP_NOT,
+        OpCode::OP_RETURN};
+
+    std::vector<value::Value> expect_constants{};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());

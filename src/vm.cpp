@@ -4,8 +4,10 @@
 #include "debug.h"
 #include "utility.h"
 #include "value.h"
+#include <cstddef>
 #include <memory>
 #include <utility>
+#include <variant>
 #include <vector>
 
 using namespace chunk;
@@ -29,7 +31,7 @@ InterpretResult VirtualMachine::run() {
     while (m_ip < m_chunk->size()) {
 #ifdef DEBUG_TRACE_EXECUTION
         for (const auto& value : m_stack) {
-            println("\t[ {} ]", value);
+            println("\t[ {} ]", value_to_string(value));
         }
         disassemble_instruction(*m_chunk, m_ip);
 #endif
@@ -46,6 +48,28 @@ InterpretResult VirtualMachine::run_step() {
         push(constant);
         break;
     }
+    case OP_NIL:
+        push(nullptr);
+        break;
+    case OP_TRUE:
+        push(true);
+        break;
+    case OP_FALSE:
+        push(false);
+        break;
+    case OP_EQUAL: {
+        Value rhs = pop();
+        Value lhs = pop();
+        const auto result = lhs == rhs;
+        push(result);
+        break;
+    }
+    case OP_GREATER:
+        binary_greater_op();
+        break;
+    case OP_LESS:
+        binary_less_op();
+        break;
     case OP_ADD:
         binary_add_op();
         break;
@@ -58,12 +82,22 @@ InterpretResult VirtualMachine::run_step() {
     case OP_DIVIDE:
         binary_divide_op();
         break;
-    case OP_NEGATE:
-        push(-pop());
+    case OP_NOT:
+        push(is_falsey(pop()));
         break;
-    case OP_RETURN:
-        println("{}", pop());
+    case OP_NEGATE: {
+        if (!std::holds_alternative<double>(peek_stack_top())) {
+            runtime_error("Operand must be a number.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        const auto negated_value = -std::get<double>(pop());
+        push(negated_value);
+        break;
+    }
+    case OP_RETURN: {
+        println("{}", value_to_string(pop()));
         return INTERPRET_OK;
+    }
     default:
         return INTERPRET_RUNTIME_ERROR;
     }
@@ -96,30 +130,100 @@ Value VirtualMachine::pop() {
     return stack_top;
 }
 
-inline std::pair<Value, Value> VirtualMachine::pop_binary_operands() {
-    Value b = pop();
-    Value a = pop();
-    return {b, a};
+void VirtualMachine::runtime_error(const std::string& message) {
+    usize line = m_chunk->get_lines().at(m_ip);
+    println_err("[line {}] in script", line);
 }
 
-inline void VirtualMachine::binary_add_op() {
-    auto operands = pop_binary_operands();
-    push(operands.second + operands.first);
+bool VirtualMachine::is_falsey(Value value) {
+    if (std::holds_alternative<std::nullptr_t>(value)) {
+        return true;
+    }
+
+    if (std::holds_alternative<bool>(value)) {
+        return !std::get<bool>(value);
+    }
+
+    return false;
 }
 
-inline void VirtualMachine::binary_subtract_op() {
-    auto operands = pop_binary_operands();
-    push(operands.second - operands.first);
+inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, double& out_rhs) {
+    const auto rhs = pop();
+    const auto lhs = pop();
+    if (!std::holds_alternative<double>(lhs) || !std::holds_alternative<double>(rhs)) {
+        runtime_error("Operands must be numbers.");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
+    out_lhs = std::get<double>(lhs);
+    out_rhs = std::get<double>(rhs);
+    return INTERPRET_OK;
 }
 
-inline void VirtualMachine::binary_multiply_op() {
-    auto operands = pop_binary_operands();
-    push(operands.second * operands.first);
+inline InterpretResult VirtualMachine::binary_add_op() {
+    double lhs = 0;
+    double rhs = 0;
+    InterpretResult result = pop_binary_operands(lhs, rhs);
+    if (result != INTERPRET_OK) {
+        return result;
+    }
+    push(lhs + rhs);
+    return INTERPRET_OK;
 }
 
-inline void VirtualMachine::binary_divide_op() {
-    auto operands = pop_binary_operands();
-    push(operands.second / operands.first);
+inline InterpretResult VirtualMachine::binary_subtract_op() {
+    double lhs = 0;
+    double rhs = 0;
+    InterpretResult result = pop_binary_operands(lhs, rhs);
+    if (result != INTERPRET_OK) {
+        return result;
+    }
+    push(lhs - rhs);
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VirtualMachine::binary_multiply_op() {
+    double lhs = 0;
+    double rhs = 0;
+    InterpretResult result = pop_binary_operands(lhs, rhs);
+    if (result != INTERPRET_OK) {
+        return result;
+    }
+    push(lhs * rhs);
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VirtualMachine::binary_divide_op() {
+    double lhs = 0;
+    double rhs = 0;
+    InterpretResult result = pop_binary_operands(lhs, rhs);
+    if (result != INTERPRET_OK) {
+        return result;
+    }
+    push(lhs / rhs);
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VirtualMachine::binary_greater_op() {
+    double lhs = 0;
+    double rhs = 0;
+    InterpretResult result = pop_binary_operands(lhs, rhs);
+    if (result != INTERPRET_OK) {
+        return result;
+    }
+    push(lhs > rhs);
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VirtualMachine::binary_less_op() {
+    double lhs = 0;
+    double rhs = 0;
+    InterpretResult result = pop_binary_operands(lhs, rhs);
+    if (result != INTERPRET_OK) {
+        return result;
+    }
+    push(lhs < rhs);
+    return INTERPRET_OK;
 }
 
 } // namespace vm
