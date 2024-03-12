@@ -1,0 +1,59 @@
+class Test {
+    printTest() {
+        print "test";
+    }
+}
+
+print Test;
+
+class Bagel {}
+var bagel = Bagel();
+
+print bagel;
+
+class Bacon {
+    eat() {
+        print "Crunch crunch crunch!";
+    }
+}
+
+Bacon().eat();
+var test = Test();
+test.printTest();
+
+class Cake {
+    taste() {
+        var adjective = "delicious";
+        print "The " + this.flavor + " cake is " + adjective + "!";
+    }
+}
+
+var cake = Cake();
+cake.flavor = "German chocolate";
+cake.taste();
+
+class Thing {
+    get_callback() {
+        fun local_function() {
+            print this;
+        }
+
+        return local_function;
+    }
+}
+
+var callback = Thing().get_callback();
+callback();
+
+class Foo {
+    init(number) {
+        this.number = number;
+    }
+
+    print_number() {
+        print this.number;
+    }
+}
+
+var fooing = Foo(10);
+fooing.print_number();

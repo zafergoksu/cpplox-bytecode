@@ -12,6 +12,11 @@ enum OpCode : u8 {
     OP_NIL,
     OP_TRUE,
     OP_FALSE,
+    // we can optimize performance by creating dedicated
+    // instructions for other side of equality operators
+    OP_EQUAL,
+    OP_GREATER,
+    OP_LESS,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,

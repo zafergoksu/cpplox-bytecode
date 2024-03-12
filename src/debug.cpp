@@ -51,6 +51,12 @@ usize disassemble_instruction(const Chunk& chunk, usize offset) {
         return simple_instruction("OP_TRUE", offset);
     case OpCode::OP_FALSE:
         return simple_instruction("OP_FALSE", offset);
+    case OpCode::OP_EQUAL:
+        return simple_instruction("OP_EQUAL", offset);
+    case OpCode::OP_GREATER:
+        return simple_instruction("OP_GREATER", offset);
+    case OpCode::OP_LESS:
+        return simple_instruction("OP_LESS", offset);
     case OpCode::OP_ADD:
         return simple_instruction("OP_ADD", offset);
     case OpCode::OP_SUBTRACT:

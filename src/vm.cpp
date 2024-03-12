@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "utility.h"
 #include "value.h"
+#include <cstddef>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -56,6 +57,19 @@ InterpretResult VirtualMachine::run_step() {
     case OP_FALSE:
         push(false);
         break;
+    case OP_EQUAL: {
+        Value rhs = pop();
+        Value lhs = pop();
+        const auto result = lhs == rhs;
+        push(result);
+        break;
+    }
+    case OP_GREATER:
+        binary_greater_op();
+        break;
+    case OP_LESS:
+        binary_less_op();
+        break;
     case OP_ADD:
         binary_add_op();
         break;
@@ -73,8 +87,7 @@ InterpretResult VirtualMachine::run_step() {
         break;
     case OP_NEGATE: {
         if (!std::holds_alternative<double>(peek_stack_top())) {
-            // TODO(zgoksu): refactor error func
-            //runtime_error("Operand must be a number.");
+            runtime_error("Operand must be a number.");
             return INTERPRET_RUNTIME_ERROR;
         }
         const auto negated_value = -std::get<double>(pop());
@@ -117,6 +130,11 @@ Value VirtualMachine::pop() {
     return stack_top;
 }
 
+void VirtualMachine::runtime_error(const std::string& message) {
+    usize line = m_chunk->get_lines().at(m_ip);
+    println_err("[line {}] in script", line);
+}
+
 bool VirtualMachine::is_falsey(Value value) {
     if (std::holds_alternative<std::nullptr_t>(value)) {
         return true;
@@ -133,7 +151,7 @@ inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, doub
     const auto rhs = pop();
     const auto lhs = pop();
     if (!std::holds_alternative<double>(lhs) || !std::holds_alternative<double>(rhs)) {
-        // runtime_error("Operands must be numbers.");
+        runtime_error("Operands must be numbers.");
         return INTERPRET_RUNTIME_ERROR;
     }
 
@@ -183,6 +201,28 @@ inline InterpretResult VirtualMachine::binary_divide_op() {
         return result;
     }
     push(lhs / rhs);
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VirtualMachine::binary_greater_op() {
+    double lhs = 0;
+    double rhs = 0;
+    InterpretResult result = pop_binary_operands(lhs, rhs);
+    if (result != INTERPRET_OK) {
+        return result;
+    }
+    push(lhs > rhs);
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VirtualMachine::binary_less_op() {
+    double lhs = 0;
+    double rhs = 0;
+    InterpretResult result = pop_binary_operands(lhs, rhs);
+    if (result != INTERPRET_OK) {
+        return result;
+    }
+    push(lhs < rhs);
     return INTERPRET_OK;
 }
 
