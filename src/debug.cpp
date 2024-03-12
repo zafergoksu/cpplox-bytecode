@@ -59,6 +59,8 @@ usize disassemble_instruction(const Chunk& chunk, usize offset) {
         return simple_instruction("OP_MULTIPLY", offset);
     case OpCode::OP_DIVIDE:
         return simple_instruction("OP_DIVIDE", offset);
+    case OpCode::OP_NOT:
+        return simple_instruction("OP_NOT", offset);
     default: {
         println("Unknown opcode {}", instruction);
         offset += 1;

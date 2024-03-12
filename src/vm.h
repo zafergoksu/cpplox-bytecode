@@ -33,6 +33,7 @@ private:
     value::Value read_constant();
     void push(value::Value value);
     value::Value pop();
+    bool is_falsey(value::Value value);
     inline InterpretResult pop_binary_operands(double& lhs, double& rhs);
     inline InterpretResult binary_add_op();
     inline InterpretResult binary_subtract_op();

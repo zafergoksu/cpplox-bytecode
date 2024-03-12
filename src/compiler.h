@@ -86,7 +86,7 @@ private:
         {token::TokenType::TOKEN_SEMICOLON, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_SLASH, {std::nullopt, std::bind(&Compiler::binary, this), Precedence::PREC_FACTOR}},
         {token::TokenType::TOKEN_STAR, {std::nullopt, std::bind(&Compiler::binary, this), Precedence::PREC_FACTOR}},
-        {token::TokenType::TOKEN_BANG, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_BANG, {std::bind(&Compiler::unary, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_BANG_EQUAL, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_EQUAL, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_EQUAL_EQUAL, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},

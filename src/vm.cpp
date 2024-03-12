@@ -68,6 +68,9 @@ InterpretResult VirtualMachine::run_step() {
     case OP_DIVIDE:
         binary_divide_op();
         break;
+    case OP_NOT:
+        push(is_falsey(pop()));
+        break;
     case OP_NEGATE: {
         if (!std::holds_alternative<double>(peek_stack_top())) {
             // TODO(zgoksu): refactor error func
@@ -112,6 +115,18 @@ Value VirtualMachine::pop() {
     Value stack_top = m_stack.back();
     m_stack.pop_back();
     return stack_top;
+}
+
+bool VirtualMachine::is_falsey(Value value) {
+    if (std::holds_alternative<std::nullptr_t>(value)) {
+        return true;
+    }
+
+    if (std::holds_alternative<bool>(value)) {
+        return !std::get<bool>(value);
+    }
+
+    return false;
 }
 
 inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, double& out_rhs) {
