@@ -29,4 +29,8 @@ const value::ValueArray& Chunk::get_constants() const {
 const std::vector<usize>& Chunk::get_lines() const {
     return m_lines;
 }
+
+void Chunk::clear_constants() {
+    m_constants.clear();
+}
 } // namespace chunk

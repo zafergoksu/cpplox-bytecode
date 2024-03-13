@@ -55,6 +55,7 @@ private:
     void number();
     void binary();
     void literal();
+    void string();
     void consume(token::TokenType token_type, const std::string& message);
     void parse_precedence(Precedence precedence);
     const ParseRule& get_rule(token::TokenType token_type);
@@ -95,7 +96,7 @@ private:
         {token::TokenType::TOKEN_LESS, {std::nullopt, std::bind(&Compiler::binary, this), Precedence::PREC_COMPARISON}},
         {token::TokenType::TOKEN_LESS_EQUAL, {std::nullopt, std::bind(&Compiler::binary, this), Precedence::PREC_COMPARISON}},
         {token::TokenType::TOKEN_IDENTIFIER, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
-        {token::TokenType::TOKEN_STRING, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_STRING, {std::bind(&Compiler::string, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_NUMBER, {std::bind(&Compiler::number, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_AND, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_CLASS, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},

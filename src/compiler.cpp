@@ -149,6 +149,11 @@ void Compiler::literal() {
     }
 }
 
+void Compiler::string() {
+    std::string str = m_parser.m_previous.get_lexeme().substr(1, m_parser.m_previous.get_lexeme().length() - 2);
+    emit_constant(std::move(str));
+}
+
 void Compiler::consume(TokenType token_type, const std::string& message) {
     if (m_parser.m_current.get_type() == token_type) {
         advance();

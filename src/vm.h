@@ -27,6 +27,7 @@ public:
     [[nodiscard]] usize get_ip() const;
     void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk);
     const value::Value& peek_stack_top() const;
+    const value::Value& peek(usize n) const;
 
 private:
     u8 read_byte();

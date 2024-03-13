@@ -270,6 +270,18 @@ TEST_F(VirtualMachineTest, test_binary_comparison_op) {
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
+TEST_F(VirtualMachineTest, test_string_concatenation) {
+    auto prog = binary_op_program("Hello, ", "world!", OpCode::OP_ADD);
+    m_vm.load_new_chunk(std::move(prog));
+    run_n_steps(2);
+    auto result = m_vm.run_step();
+
+    EXPECT_EQ(std::get<std::string>(m_vm.peek_stack_top()), "Hello, world!");
+    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
+    result = m_vm.run_step();
+    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
+}
+
 int main(int argc, char* argv[]) {
     ::testing::InitGoogleMock(&argc, argv);
     return RUN_ALL_TESTS();
