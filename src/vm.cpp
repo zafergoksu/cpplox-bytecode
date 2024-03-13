@@ -70,9 +70,19 @@ InterpretResult VirtualMachine::run_step() {
     case OP_LESS:
         binary_less_op();
         break;
-    case OP_ADD:
-        binary_add_op();
+    case OP_ADD: {
+        const Value& stack_top = peek_stack_top();
+        const Value& stack_top_prev = peek(1);
+        if (std::holds_alternative<std::string>(stack_top) && std::holds_alternative<std::string>(stack_top_prev)) {
+            push(std::get<std::string>(stack_top_prev) + std::get<std::string>(stack_top));
+        } else if (std::holds_alternative<double>(stack_top) && std::holds_alternative<double>(stack_top_prev)) {
+            binary_add_op();
+        } else {
+            runtime_error("Operands must be two numbers or two strings.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
         break;
+    }
     case OP_SUBTRACT:
         binary_subtract_op();
         break;
@@ -121,7 +131,11 @@ void VirtualMachine::push(Value value) {
 }
 
 const Value& VirtualMachine::peek_stack_top() const {
-    return m_stack.back();
+    return peek(0);
+}
+
+const Value& VirtualMachine::peek(usize n) const {
+    return m_stack.at(m_stack.size() - 1 - n);
 }
 
 Value VirtualMachine::pop() {

@@ -22,6 +22,10 @@ struct ostream_value_visitor {
         m_os << value;
     }
 
+    void operator()(const std::string& value) {
+        m_os << value;
+    }
+
     std::ostream& m_os;
 };
 
@@ -37,6 +41,10 @@ void print_visitor::operator()(double value) {
     print("{:g}", value);
 }
 
+void print_visitor::operator()(const std::string& value) {
+    print("{}", value);
+}
+
 std::string value_to_string_visitor::operator()(std::nullptr_t) {
     return "nil";
 }
@@ -50,6 +58,10 @@ std::string value_to_string_visitor::operator()(bool value) {
 
 std::string value_to_string_visitor::operator()(double value) {
     return std::to_string(value);
+}
+
+std::string value_to_string_visitor::operator()(const std::string& value) {
+    return value;
 }
 
 std::ostream& operator<<(std::ostream& os, const Value& value) {
@@ -71,5 +83,9 @@ void ValueArray::write_value(Value value) {
 
 const std::vector<Value>& ValueArray::get_values() const {
     return m_values;
+}
+
+void ValueArray::clear() {
+    m_values.clear();
 }
 } // namespace value

@@ -35,6 +35,7 @@ public:
     [[nodiscard]] const std::vector<u8>& get_code() const;
     [[nodiscard]] const std::vector<usize>& get_lines() const;
     [[nodiscard]] const value::ValueArray& get_constants() const;
+    void clear_constants();
 
 private:
     std::vector<u8> m_code;

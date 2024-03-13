@@ -2,7 +2,6 @@
 #include "common.h"
 #include "compiler.h"
 #include "scanner.h"
-#include "token.h"
 #include "value.h"
 #include "gtest/gtest.h"
 #include <gmock/gmock.h>
@@ -10,7 +9,6 @@
 #include <string>
 
 using namespace compiler;
-using namespace token;
 using namespace chunk;
 using namespace scanner;
 
@@ -48,6 +46,14 @@ protected:
 
     static std::string test_equality_op() {
         return "true != false";
+    }
+
+    static std::string test_string_expression() {
+        return "\"Hello, world!\"";
+    }
+
+    static std::string test_string_concatenation_op() {
+        return "\"Hello, world!\" + \" hi\"";
     }
 
     void setup_compiler(std::string source) {
@@ -277,6 +283,61 @@ TEST_F(CompilerTest, test_equality_op) {
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{};
+
+    EXPECT_EQ(result, true);
+    EXPECT_EQ(out_size, expect_bytes.size());
+    EXPECT_THAT(out_bytes, Eq(expect_bytes));
+    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
+}
+
+TEST_F(CompilerTest, test_string_expression) {
+    setup_compiler(test_string_expression());
+
+    if (!scanner_and_chunk_are_valid()) {
+        FAIL() << "Scanner and chunk are not valid pointers";
+    }
+
+    bool result = m_compiler.compile();
+
+    auto out_size = m_current_chunk->size();
+    auto out_bytes = m_current_chunk->get_code();
+    auto out_constants = m_current_chunk->get_constants();
+
+    std::vector<u8> expect_bytes{
+        OpCode::OP_CONSTANT,
+        0x00,
+        OpCode::OP_RETURN};
+
+    std::vector<value::Value> expect_constants{"Hello, world!"};
+
+    EXPECT_EQ(result, true);
+    EXPECT_EQ(out_size, expect_bytes.size());
+    EXPECT_THAT(out_bytes, Eq(expect_bytes));
+    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
+}
+
+TEST_F(CompilerTest, test_string_concatenation_op) {
+    setup_compiler(test_string_concatenation_op());
+
+    if (!scanner_and_chunk_are_valid()) {
+        FAIL() << "Scanner and chunk are not valid pointers";
+    }
+
+    bool result = m_compiler.compile();
+
+    auto out_size = m_current_chunk->size();
+    auto out_bytes = m_current_chunk->get_code();
+    auto out_constants = m_current_chunk->get_constants();
+
+    std::vector<u8> expect_bytes{
+        OpCode::OP_CONSTANT,
+        0x00,
+        OpCode::OP_CONSTANT,
+        0x01,
+        OpCode::OP_ADD,
+        OpCode::OP_RETURN};
+
+    std::vector<value::Value> expect_constants{"Hello, world!", " hi"};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
