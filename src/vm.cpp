@@ -17,7 +17,8 @@ namespace vm {
 
 VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
     : m_chunk{std::move(chunk)},
-      m_ip{0} {
+      m_ip{0},
+      m_table{} {
     m_stack.reserve(256);
 }
 
@@ -73,8 +74,9 @@ InterpretResult VirtualMachine::run_step() {
     case OP_ADD: {
         const Value& stack_top = peek_stack_top();
         const Value& stack_top_prev = peek(1);
-        if (std::holds_alternative<std::string>(stack_top) && std::holds_alternative<std::string>(stack_top_prev)) {
-            push(std::get<std::string>(stack_top_prev) + std::get<std::string>(stack_top));
+        if (std::holds_alternative<ObjString>(stack_top) && std::holds_alternative<ObjString>(stack_top_prev)) {
+            std::string new_string = std::get<ObjString>(stack_top_prev).str + std::get<ObjString>(stack_top).str;
+            push(std::move(make_obj_string_interned(m_table, std::move(new_string))));
         } else if (std::holds_alternative<double>(stack_top) && std::holds_alternative<double>(stack_top_prev)) {
             binary_add_op();
         } else {

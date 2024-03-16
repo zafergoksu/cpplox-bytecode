@@ -5,6 +5,7 @@ set(LIBRARY_HEADERS
         debug.h
         lox.h
         scanner.h
+        table.h
         token.h
         utility.h
         value.h
@@ -16,6 +17,7 @@ set(LIBRARY_SOURCES
         debug.cpp
         lox.cpp
         scanner.cpp
+        table.cpp
         token.cpp
         value.cpp
         vm.cpp)

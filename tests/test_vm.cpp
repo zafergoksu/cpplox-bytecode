@@ -1,14 +1,13 @@
 #include "chunk.h"
+#include "common.h"
+#include "value.h"
 #include "vm.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <variant>
 
 using namespace chunk;
-
-// TODO(zgoksu): add tests for failures
-// - fail when doing binary op
-// - fail when op negate is not double
+using namespace value;
 
 class VirtualMachineTest : public ::testing::Test {
 protected:
@@ -25,7 +24,7 @@ protected:
         return chunk;
     }
 
-    static std::unique_ptr<Chunk> binary_op_program(value::Value lhs, value::Value rhs, OpCode op_code) {
+    static std::unique_ptr<Chunk> binary_op_program(Value lhs, Value rhs, OpCode op_code) {
         auto chunk = std::make_unique<Chunk>();
 
         usize constant_idx = chunk->write_constant(lhs);
@@ -271,12 +270,14 @@ TEST_F(VirtualMachineTest, test_binary_comparison_op) {
 }
 
 TEST_F(VirtualMachineTest, test_string_concatenation) {
-    auto prog = binary_op_program("Hello, ", "world!", OpCode::OP_ADD);
+    ObjString string_1 = make_obj_string("Hello, ");
+    ObjString string_2 = make_obj_string("world!");
+    auto prog = binary_op_program(string_1, string_2, OpCode::OP_ADD);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<std::string>(m_vm.peek_stack_top()), "Hello, world!");
+    EXPECT_EQ(std::get<ObjString>(m_vm.peek_stack_top()).str, "Hello, world!");
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);

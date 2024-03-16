@@ -11,6 +11,7 @@
 using namespace compiler;
 using namespace chunk;
 using namespace scanner;
+using namespace value;
 
 using testing::Eq;
 
@@ -308,7 +309,8 @@ TEST_F(CompilerTest, test_string_expression) {
         0x00,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{"Hello, world!"};
+    ObjString string_1 = make_obj_string("Hello, world!");
+    std::vector<value::Value> expect_constants{string_1};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
@@ -337,7 +339,9 @@ TEST_F(CompilerTest, test_string_concatenation_op) {
         OpCode::OP_ADD,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{"Hello, world!", " hi"};
+    ObjString string_1 = make_obj_string("Hello, world!");
+    ObjString string_2 = make_obj_string(" hi");
+    std::vector<value::Value> expect_constants{string_1, string_2};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());

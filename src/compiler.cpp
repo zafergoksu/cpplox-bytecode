@@ -151,7 +151,7 @@ void Compiler::literal() {
 
 void Compiler::string() {
     std::string str = m_parser.m_previous.get_lexeme().substr(1, m_parser.m_previous.get_lexeme().length() - 2);
-    emit_constant(std::move(str));
+    emit_constant(std::move(make_obj_string(std::move(str))));
 }
 
 void Compiler::consume(TokenType token_type, const std::string& message) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "table.h"
 #include "value.h"
 
 #include <memory>
@@ -37,7 +38,6 @@ private:
     void runtime_error(const std::string& message);
 
     bool is_falsey(value::Value value);
-    bool values_equal(value::Value lhs, value::Value rhs);
     inline InterpretResult pop_binary_operands(double& lhs, double& rhs);
     inline InterpretResult binary_add_op();
     inline InterpretResult binary_subtract_op();
@@ -48,6 +48,7 @@ private:
 
     std::shared_ptr<const chunk::Chunk> m_chunk;
     usize m_ip;
+    table::Table m_table;
     std::vector<value::Value> m_stack;
 };
 
