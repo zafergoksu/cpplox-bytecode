@@ -48,7 +48,8 @@ private:
 
     std::shared_ptr<const chunk::Chunk> m_chunk;
     usize m_ip;
-    table::Table m_table;
+    table::Table m_strings;
+    table::Table m_globals;
     std::vector<value::Value> m_stack;
 };
 

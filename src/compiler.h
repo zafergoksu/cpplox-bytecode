@@ -49,6 +49,17 @@ public:
 
 private:
     void advance();
+    bool match(token::TokenType token_type);
+    bool check(token::TokenType token_type);
+
+    // statements
+    void statement();
+    void declaration();
+    void var_declaration();
+    void print_statement();
+    void expression_statement();
+
+    // expressions
     void expression();
     void grouping();
     void unary();
@@ -56,9 +67,16 @@ private:
     void binary();
     void literal();
     void string();
+    void variable();
+
     void consume(token::TokenType token_type, const std::string& message);
     void parse_precedence(Precedence precedence);
     const ParseRule& get_rule(token::TokenType token_type);
+    void synchronize();
+    u8 parse_variable(const std::string& error_msg);
+    u8 identifier_constant(const token::Token& token);
+    void define_variable(u8 global);
+    void named_variable(const token::Token& name);
 
     void emit_byte(u8 byte);
     void emit_bytes(u8 byte_1, u8 byte_2);
@@ -95,7 +113,7 @@ private:
         {token::TokenType::TOKEN_GREATER_EQUAL, {std::nullopt, std::bind(&Compiler::binary, this), Precedence::PREC_COMPARISON}},
         {token::TokenType::TOKEN_LESS, {std::nullopt, std::bind(&Compiler::binary, this), Precedence::PREC_COMPARISON}},
         {token::TokenType::TOKEN_LESS_EQUAL, {std::nullopt, std::bind(&Compiler::binary, this), Precedence::PREC_COMPARISON}},
-        {token::TokenType::TOKEN_IDENTIFIER, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_IDENTIFIER, {std::bind(&Compiler::variable, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_STRING, {std::bind(&Compiler::string, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_NUMBER, {std::bind(&Compiler::number, this), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_AND, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},

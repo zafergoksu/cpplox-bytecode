@@ -3,6 +3,7 @@
 #include "table.h"
 #include "utility.h"
 #include <ios>
+#include <optional>
 #include <variant>
 #include <vector>
 
@@ -11,13 +12,13 @@ namespace value {
 ObjString make_obj_string_interned(table::Table& table, std::string value) {
     u32 hash = value::ObjString::hash_string(value);
 
-    ObjString* interned = table.find_string(value, hash);
-    if (interned != nullptr) {
-        return *interned;
+    std::optional<ObjString> interned = table.find_string(value, hash);
+    if (interned) {
+        return interned.value();
     }
 
     ObjString obj_string{std::move(value), hash};
-    table.set(&obj_string, nullptr);
+    table.set(obj_string, nullptr);
     return obj_string;
 }
 

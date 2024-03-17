@@ -18,7 +18,8 @@ namespace vm {
 VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
     : m_chunk{std::move(chunk)},
       m_ip{0},
-      m_table{} {
+      m_strings{},
+      m_globals{} {
     m_stack.reserve(256);
 }
 
@@ -44,39 +45,58 @@ InterpretResult VirtualMachine::run() {
 InterpretResult VirtualMachine::run_step() {
     u8 instruction = read_byte();
     switch (instruction) {
-    case OP_CONSTANT: {
+    case OpCode::OP_CONSTANT: {
         Value constant = read_constant();
         push(constant);
         break;
     }
-    case OP_NIL:
+    case OpCode::OP_NIL:
         push(nullptr);
         break;
-    case OP_TRUE:
+    case OpCode::OP_TRUE:
         push(true);
         break;
-    case OP_FALSE:
+    case OpCode::OP_FALSE:
         push(false);
         break;
-    case OP_EQUAL: {
+    case OpCode::OP_POP:
+        pop();
+        break;
+    case OpCode::OP_GET_GLOBAL: {
+        ObjString name = std::get<ObjString>(read_constant());
+        Value value;
+        if (!m_globals.get(name, value)) {
+            runtime_error("Undefined variable.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        push(value);
+        break;
+    }
+    case OpCode::OP_DEFINE_GLOBAL: {
+        ObjString name = std::get<ObjString>(read_constant());
+        m_globals.set(name, peek_stack_top());
+        pop();
+        break;
+    }
+    case OpCode::OP_EQUAL: {
         Value rhs = pop();
         Value lhs = pop();
         const auto result = lhs == rhs;
         push(result);
         break;
     }
-    case OP_GREATER:
+    case OpCode::OP_GREATER:
         binary_greater_op();
         break;
-    case OP_LESS:
+    case OpCode::OP_LESS:
         binary_less_op();
         break;
-    case OP_ADD: {
+    case OpCode::OP_ADD: {
         const Value& stack_top = peek_stack_top();
         const Value& stack_top_prev = peek(1);
         if (std::holds_alternative<ObjString>(stack_top) && std::holds_alternative<ObjString>(stack_top_prev)) {
-            std::string new_string = std::get<ObjString>(stack_top_prev).str + std::get<ObjString>(stack_top).str;
-            push(std::move(make_obj_string_interned(m_table, std::move(new_string))));
+            std::string new_string = std::get<ObjString>(pop()).str + std::get<ObjString>(pop()).str;
+            push(std::move(make_obj_string_interned(m_strings, std::move(new_string))));
         } else if (std::holds_alternative<double>(stack_top) && std::holds_alternative<double>(stack_top_prev)) {
             binary_add_op();
         } else {
@@ -85,19 +105,19 @@ InterpretResult VirtualMachine::run_step() {
         }
         break;
     }
-    case OP_SUBTRACT:
+    case OpCode::OP_SUBTRACT:
         binary_subtract_op();
         break;
-    case OP_MULTIPLY:
+    case OpCode::OP_MULTIPLY:
         binary_multiply_op();
         break;
-    case OP_DIVIDE:
+    case OpCode::OP_DIVIDE:
         binary_divide_op();
         break;
-    case OP_NOT:
+    case OpCode::OP_NOT:
         push(is_falsey(pop()));
         break;
-    case OP_NEGATE: {
+    case OpCode::OP_NEGATE: {
         if (!std::holds_alternative<double>(peek_stack_top())) {
             runtime_error("Operand must be a number.");
             return INTERPRET_RUNTIME_ERROR;
@@ -106,8 +126,13 @@ InterpretResult VirtualMachine::run_step() {
         push(negated_value);
         break;
     }
-    case OP_RETURN: {
-        println("{}", value_to_string(pop()));
+    case OpCode::OP_PRINT: {
+        std::visit(print_visitor{}, pop());
+        println("");
+        break;
+    }
+    case OpCode::OP_RETURN: {
+        // Exit virtual machine
         return INTERPRET_OK;
     }
     default:

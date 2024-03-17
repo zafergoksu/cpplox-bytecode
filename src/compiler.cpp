@@ -29,8 +29,10 @@ Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Chunk> chun
 
 bool Compiler::compile() {
     advance();
-    expression();
-    consume(TokenType::TOKEN_EOF, "Expect end of expression.");
+
+    while (!match(TokenType::TOKEN_EOF)) {
+        declaration();
+    }
 
     end_compilation();
     return !m_parser.m_had_error;
@@ -38,6 +40,116 @@ bool Compiler::compile() {
 
 const ParseRule& Compiler::get_rule(token::TokenType token_type) {
     return m_rules[token_type];
+}
+
+void Compiler::synchronize() {
+    // Reset to default state as after synchronization
+    // we assume further statements as valid.
+    m_parser.m_panic_mode = false;
+
+    while (m_parser.m_current.get_type() != TokenType::TOKEN_EOF) {
+        // We looked a semicolon, our boundary point for statements
+        if (m_parser.m_previous.get_type() == TokenType::TOKEN_SEMICOLON) {
+            return;
+        }
+
+        switch (m_parser.m_current.get_type()) {
+        case TokenType::TOKEN_CLASS:
+        case TokenType::TOKEN_FUN:
+        case TokenType::TOKEN_VAR:
+        case TokenType::TOKEN_FOR:
+        case TokenType::TOKEN_IF:
+        case TokenType::TOKEN_WHILE:
+        case TokenType::TOKEN_PRINT:
+        case TokenType::TOKEN_RETURN:
+            return;
+        default:
+            // Do nothing here.
+            advance();
+        }
+    }
+}
+
+u8 Compiler::parse_variable(const std::string& error_msg) {
+    consume(TokenType::TOKEN_IDENTIFIER, error_msg);
+    return identifier_constant(m_parser.m_previous);
+}
+
+u8 Compiler::identifier_constant(const token::Token& token) {
+    ObjString obj_string = make_obj_string(token.get_lexeme());
+    return make_constant(std::move(obj_string));
+}
+
+void Compiler::define_variable(u8 global) {
+    emit_bytes(OpCode::OP_DEFINE_GLOBAL, global);
+}
+
+void Compiler::named_variable(const token::Token& name) {
+    u8 arg = identifier_constant(name);
+    emit_bytes(OpCode::OP_GET_GLOBAL, arg);
+}
+
+bool Compiler::match(token::TokenType token_type) {
+    if (!check(token_type)) {
+        return false;
+    }
+
+    advance();
+    return true;
+}
+
+bool Compiler::check(token::TokenType token_type) {
+    return m_parser.m_current.get_type() == token_type;
+}
+
+void Compiler::statement() {
+    if (match(TokenType::TOKEN_PRINT)) {
+        print_statement();
+    } else {
+        expression_statement();
+    }
+}
+
+void Compiler::declaration() {
+    if (match(TokenType::TOKEN_VAR)) {
+        var_declaration();
+    } else {
+        statement();
+    }
+
+    // We minimise errors by preventing cascading
+    // errors from the initial error. We synchronize the compiler
+    // to a point where we assume valid statements further on,
+    // we have our boundary points.
+    if (m_parser.m_panic_mode) {
+        synchronize();
+    }
+}
+
+void Compiler::var_declaration() {
+    u8 global = parse_variable("Expect variable name.");
+
+    if (match(TokenType::TOKEN_EQUAL)) {
+        expression();
+    } else {
+        // we set statements like `var a;` to nil
+        emit_byte(OP_NIL);
+    }
+
+    consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+    define_variable(global);
+}
+
+void Compiler::print_statement() {
+    expression();
+    consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after value.");
+    emit_byte(OpCode::OP_PRINT);
+}
+
+void Compiler::expression_statement() {
+    expression();
+    consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after expression.");
+    emit_byte(OpCode::OP_POP);
 }
 
 void Compiler::expression() {
@@ -152,6 +264,10 @@ void Compiler::literal() {
 void Compiler::string() {
     std::string str = m_parser.m_previous.get_lexeme().substr(1, m_parser.m_previous.get_lexeme().length() - 2);
     emit_constant(std::move(make_obj_string(std::move(str))));
+}
+
+void Compiler::variable() {
+    named_variable(m_parser.m_previous);
 }
 
 void Compiler::consume(TokenType token_type, const std::string& message) {
