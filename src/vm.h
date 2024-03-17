@@ -38,6 +38,7 @@ private:
     void runtime_error(const std::string& message);
 
     bool is_falsey(value::Value value);
+    inline void concatenate();
     inline InterpretResult pop_binary_operands(double& lhs, double& rhs);
     inline InterpretResult binary_add_op();
     inline InterpretResult binary_subtract_op();

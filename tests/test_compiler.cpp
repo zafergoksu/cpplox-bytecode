@@ -18,43 +18,43 @@ using testing::Eq;
 class CompilerTest : public testing::Test {
 protected:
     static std::string test_number_literals() {
-        return "123.1";
+        return "123.1;";
     }
 
     static std::string test_grouping() {
-        return "5 * (123 + 1)";
+        return "5 * (123 + 1);";
     }
 
     static std::string test_unary_negation() {
-        return "-123";
+        return "-123;";
     }
 
     static std::string test_arithmetic_ops() {
-        return "1 + 4 * 3";
+        return "1 + 4 * 3;";
     }
 
     static std::string test_boolean_values() {
-        return "true";
+        return "true;";
     }
 
     static std::string test_nil_value() {
-        return "nil";
+        return "nil;";
     }
 
     static std::string test_not_op() {
-        return "!true";
+        return "!true;";
     }
 
     static std::string test_equality_op() {
-        return "true != false";
+        return "true != false;";
     }
 
     static std::string test_string_expression() {
-        return "\"Hello, world!\"";
+        return "\"Hello, world!\";";
     }
 
     static std::string test_string_concatenation_op() {
-        return "\"Hello, world!\" + \" hi\"";
+        return "\"Hello, world!\" + \" hi\";";
     }
 
     void setup_compiler(std::string source) {
@@ -86,6 +86,7 @@ TEST_F(CompilerTest, test_number_literals) {
     std::vector<u8> expect_bytes{
         OpCode::OP_CONSTANT,
         0x00,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{123.1};
@@ -118,6 +119,7 @@ TEST_F(CompilerTest, test_grouping) {
         0x02,
         OpCode::OP_ADD,
         OpCode::OP_MULTIPLY,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{5.0, 123.0, 1.0};
@@ -145,6 +147,7 @@ TEST_F(CompilerTest, test_unary_negation) {
         OpCode::OP_CONSTANT,
         0x00,
         OpCode::OP_NEGATE,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{123.0};
@@ -177,6 +180,7 @@ TEST_F(CompilerTest, test_arithmetic_ops) {
         0x02,
         OpCode::OP_MULTIPLY,
         OpCode::OP_ADD,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{1.0, 4.0, 3.0};
@@ -202,6 +206,7 @@ TEST_F(CompilerTest, test_boolean_values) {
 
     std::vector<u8> expect_bytes{
         OpCode::OP_TRUE,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{};
@@ -227,6 +232,7 @@ TEST_F(CompilerTest, test_nil_value) {
 
     std::vector<u8> expect_bytes{
         OpCode::OP_NIL,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{};
@@ -253,6 +259,7 @@ TEST_F(CompilerTest, test_not_op) {
     std::vector<u8> expect_bytes{
         OpCode::OP_TRUE,
         OpCode::OP_NOT,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{};
@@ -281,6 +288,7 @@ TEST_F(CompilerTest, test_equality_op) {
         OpCode::OP_FALSE,
         OpCode::OP_EQUAL,
         OpCode::OP_NOT,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     std::vector<value::Value> expect_constants{};
@@ -307,6 +315,7 @@ TEST_F(CompilerTest, test_string_expression) {
     std::vector<u8> expect_bytes{
         OpCode::OP_CONSTANT,
         0x00,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     ObjString string_1 = make_obj_string("Hello, world!");
@@ -337,6 +346,7 @@ TEST_F(CompilerTest, test_string_concatenation_op) {
         OpCode::OP_CONSTANT,
         0x01,
         OpCode::OP_ADD,
+        OpCode::OP_POP,
         OpCode::OP_RETURN};
 
     ObjString string_1 = make_obj_string("Hello, world!");

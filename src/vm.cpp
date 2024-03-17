@@ -95,8 +95,7 @@ InterpretResult VirtualMachine::run_step() {
         const Value& stack_top = peek_stack_top();
         const Value& stack_top_prev = peek(1);
         if (std::holds_alternative<ObjString>(stack_top) && std::holds_alternative<ObjString>(stack_top_prev)) {
-            std::string new_string = std::get<ObjString>(pop()).str + std::get<ObjString>(pop()).str;
-            push(std::move(make_obj_string_interned(m_strings, std::move(new_string))));
+            concatenate();
         } else if (std::holds_alternative<double>(stack_top) && std::holds_alternative<double>(stack_top_prev)) {
             binary_add_op();
         } else {
@@ -186,6 +185,13 @@ bool VirtualMachine::is_falsey(Value value) {
     }
 
     return false;
+}
+
+inline void VirtualMachine::concatenate() {
+    ObjString rhs = std::get<ObjString>(pop());
+    ObjString lhs = std::get<ObjString>(pop());
+    std::string new_string = lhs.str + rhs.str;
+    push(std::move(make_obj_string_interned(m_strings, std::move(new_string))));
 }
 
 inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, double& out_rhs) {
