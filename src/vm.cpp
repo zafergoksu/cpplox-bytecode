@@ -38,6 +38,9 @@ InterpretResult VirtualMachine::run() {
         disassemble_instruction(*m_chunk, m_ip);
 #endif
         result = run_step();
+        if (result != INTERPRET_OK) {
+            return result;
+        }
     }
     return result;
 }
@@ -66,7 +69,7 @@ InterpretResult VirtualMachine::run_step() {
         ObjString name = std::get<ObjString>(read_constant());
         Value value;
         if (!m_globals.get(name, value)) {
-            runtime_error("Undefined variable.");
+            runtime_error("Undefined variable '" + name.str + "'.");
             return INTERPRET_RUNTIME_ERROR;
         }
         push(value);
@@ -171,6 +174,7 @@ Value VirtualMachine::pop() {
 }
 
 void VirtualMachine::runtime_error(const std::string& message) {
+    print_err("{}", message);
     usize line = m_chunk->get_lines().at(m_ip);
     println_err("[line {}] in script", line);
 }
