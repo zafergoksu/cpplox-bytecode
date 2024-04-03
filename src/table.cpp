@@ -2,40 +2,30 @@
 #include "common.h"
 #include "value.h"
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <variant>
 
 using namespace value;
 
 namespace table {
-Table::Table() : m_count{0}, m_capacity{k_initial_capacity}, m_entries{std::make_unique<Entry[]>(k_initial_capacity)} {}
+Table::Table() : m_entries{k_initial_capacity} {}
 
-bool Table::set(ObjString* key, Value value) {
-    if (m_count + 1 > static_cast<u32>(static_cast<float>(m_capacity) * k_max_load)) {
-        adjust_capacity(m_capacity * 2);
-    }
-
-    Entry* entry = find_entry(m_entries, m_capacity, key);
-    bool is_new_key = entry->key == nullptr;
-
-    // we are not counting tombstones if we get a free entry to use that is a
-    // tombstone
-    if (is_new_key && std::holds_alternative<std::nullptr_t>(entry->value)) {
-        m_count++;
-    }
-
+bool Table::set(ObjString& key, Value value) {
+    Entry* entry = find_entry(key);
+    bool is_new_key = entry->key == std::nullopt;
     entry->key = key;
     entry->value = value;
     return is_new_key;
 }
 
-bool Table::get(ObjString* key, Value& value) {
-    if (m_count == 0) {
+bool Table::get(ObjString& key, Value& value) {
+    if (m_entries.size() == 0) {
         return false;
     }
 
-    Entry* entry = find_entry(m_entries, m_capacity, key);
-    if (entry->key == nullptr) {
+    Entry* entry = find_entry(key);
+    if (!entry->key) {
         return false;
     }
 
@@ -43,13 +33,13 @@ bool Table::get(ObjString* key, Value& value) {
     return true;
 }
 
-bool Table::del(ObjString* key) {
-    if (m_count == 0) {
+bool Table::del(ObjString& key) {
+    if (m_entries.size() == 0) {
         return false;
     }
 
-    Entry* entry = find_entry(m_entries, m_capacity, key);
-    if (entry->key == nullptr) {
+    Entry* entry = find_entry(key);
+    if (!entry->key) {
         return false;
     }
 
@@ -58,33 +48,34 @@ bool Table::del(ObjString* key) {
     // of the chain and would orphan the succeeding colliding values, therefore,
     // a tombstone allows us to continue linear probing until we find the latest collided value
 
-    entry->key = nullptr;
+    entry->key = std::nullopt;
     entry->value = true;
     return true;
 }
 
 void Table::add_all(Table& to) {
-    for (u32 i = 0; i < m_capacity; i++) {
-        Entry* entry = &m_entries[i];
-        if (entry->key != nullptr) {
-            to.set(entry->key, entry->value);
+    for (u32 i = 0; i < m_entries.capacity(); i++) {
+        Entry& entry = m_entries[i];
+        if (entry.key) {
+            to.set(entry.key.value(), entry.value);
         }
     }
 }
 
-Entry* Table::find_entry(const std::unique_ptr<Entry[]>& entries, u32 capacity, ObjString* key) {
-    u32 index = key->hash % capacity;
+Entry* Table::find_entry(ObjString& key) {
+    auto capacity = m_entries.capacity();
+    u32 index = key.hash % capacity;
     Entry* tombstone = nullptr;
     while (true) {
-        Entry* entry = &entries[index];
-        if (entry->key == nullptr) {
+        Entry* entry = &m_entries[index];
+        if (!entry->key) {
             if (std::holds_alternative<std::nullptr_t>(entry->value)) {
                 // This entry is truely empty
                 // return a tombstone slot if we encountered one earlier
                 return tombstone != nullptr ? tombstone : entry;
             } else {
                 // We found a tombstone, continue looking
-                if (tombstone == nullptr) {
+                if (!tombstone) {
                     tombstone = entry;
                 }
             }
@@ -92,53 +83,30 @@ Entry* Table::find_entry(const std::unique_ptr<Entry[]>& entries, u32 capacity, 
             // We found our key
             return entry;
         }
-    }
 
-    index = (index + 1) % capacity;
+        index = (index + 1) % capacity;
+    }
 }
 
-ObjString* Table::find_string(const std::string& value, u32 hash) {
-    if (m_count == 0) {
-        return nullptr;
+std::optional<ObjString> Table::find_string(const std::string& value, u32 hash) {
+    if (m_entries.size() == 0) {
+        return std::nullopt;
     }
 
-    u32 index = hash % m_capacity;
+    u32 index = hash % m_entries.capacity();
 
     while (true) {
-        Entry* entry = &m_entries[index];
-        if (entry->key == nullptr) {
+        Entry& entry = m_entries[index];
+        if (!entry.key) {
             // Stop if we find an empty non-tombstone entry.
-            if (std::holds_alternative<std::nullptr_t>(entry->value)) {
-                return nullptr;
+            if (std::holds_alternative<std::nullptr_t>(entry.value)) {
+                return std::nullopt;
             }
-        } else if (entry->key->str.length() && entry->key->hash == hash && entry->key->str == value) {
-            return entry->key;
+        } else if (entry.key->str.length() && entry.key->hash == hash && entry.key->str == value) {
+            return entry.key;
         }
 
-        index = (index + 1) % m_capacity;
+        index = (index + 1) % m_entries.capacity();
     }
 }
-
-void Table::adjust_capacity(u32 new_capacity) {
-    auto entries = std::make_unique<Entry[]>(new_capacity);
-
-    // by rebuilding the table when adjusting the capacity,
-    // we reset the count to disard tombstones
-    m_count = 0;
-    for (u32 i = 0; i < m_capacity; i++) {
-        Entry* entry = &m_entries[i];
-        if (entry->key == nullptr) {
-            continue;
-        }
-
-        Entry* dest = find_entry(entries, new_capacity, entry->key);
-        dest->key = entry->key;
-        dest->value = entry->value;
-        m_count++;
-    }
-
-    m_capacity = new_capacity;
-    m_entries = std::move(entries);
-}
-
 } // namespace table

@@ -26,9 +26,7 @@ vm::InterpretResult interpret(std::string source, vm::VirtualMachine& vm) {
     }
 
     vm.load_new_chunk(chunk);
-    vm.run();
-
-    return vm::InterpretResult::INTERPRET_OK;
+    return vm.run();
 }
 
 void run_file(const std::string& path, vm::VirtualMachine& vm) {

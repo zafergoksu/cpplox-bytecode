@@ -29,8 +29,10 @@ Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Chunk> chun
 
 bool Compiler::compile() {
     advance();
-    expression();
-    consume(TokenType::TOKEN_EOF, "Expect end of expression.");
+
+    while (!match(TokenType::TOKEN_EOF)) {
+        declaration();
+    }
 
     end_compilation();
     return !m_parser.m_had_error;
@@ -40,18 +42,134 @@ const ParseRule& Compiler::get_rule(token::TokenType token_type) {
     return m_rules[token_type];
 }
 
+void Compiler::synchronize() {
+    // Reset to default state as after synchronization
+    // we assume further statements as valid.
+    m_parser.m_panic_mode = false;
+
+    while (m_parser.m_current.get_type() != TokenType::TOKEN_EOF) {
+        // We looked a semicolon, our boundary point for statements
+        if (m_parser.m_previous.get_type() == TokenType::TOKEN_SEMICOLON) {
+            return;
+        }
+
+        switch (m_parser.m_current.get_type()) {
+        case TokenType::TOKEN_CLASS:
+        case TokenType::TOKEN_FUN:
+        case TokenType::TOKEN_VAR:
+        case TokenType::TOKEN_FOR:
+        case TokenType::TOKEN_IF:
+        case TokenType::TOKEN_WHILE:
+        case TokenType::TOKEN_PRINT:
+        case TokenType::TOKEN_RETURN:
+            return;
+        default:
+            // Do nothing here.
+            advance();
+        }
+    }
+}
+
+u8 Compiler::parse_variable(const std::string& error_msg) {
+    consume(TokenType::TOKEN_IDENTIFIER, error_msg);
+    return identifier_constant(m_parser.m_previous);
+}
+
+u8 Compiler::identifier_constant(const token::Token& token) {
+    ObjString obj_string = make_obj_string(token.get_lexeme());
+    return make_constant(std::move(obj_string));
+}
+
+void Compiler::define_variable(u8 global) {
+    emit_bytes(OpCode::OP_DEFINE_GLOBAL, global);
+}
+
+void Compiler::named_variable(const token::Token& name, bool can_assign) {
+    u8 arg = identifier_constant(name);
+
+    if (can_assign && match(TokenType::TOKEN_EQUAL)) {
+        expression();
+        emit_bytes(OpCode::OP_SET_GLOBAL, arg);
+    } else {
+        emit_bytes(OpCode::OP_GET_GLOBAL, arg);
+    }
+}
+
+bool Compiler::match(token::TokenType token_type) {
+    if (!check(token_type)) {
+        return false;
+    }
+
+    advance();
+    return true;
+}
+
+bool Compiler::check(token::TokenType token_type) {
+    return m_parser.m_current.get_type() == token_type;
+}
+
+void Compiler::statement() {
+    if (match(TokenType::TOKEN_PRINT)) {
+        print_statement();
+    } else {
+        expression_statement();
+    }
+}
+
+void Compiler::declaration() {
+    if (match(TokenType::TOKEN_VAR)) {
+        var_declaration();
+    } else {
+        statement();
+    }
+
+    // We minimise errors by preventing cascading
+    // errors from the initial error. We synchronize the compiler
+    // to a point where we assume valid statements further on,
+    // we have our boundary points.
+    if (m_parser.m_panic_mode) {
+        synchronize();
+    }
+}
+
+void Compiler::var_declaration() {
+    u8 global = parse_variable("Expect variable name.");
+
+    if (match(TokenType::TOKEN_EQUAL)) {
+        expression();
+    } else {
+        // we set statements like `var a;` to nil
+        emit_byte(OP_NIL);
+    }
+
+    consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+    define_variable(global);
+}
+
+void Compiler::print_statement() {
+    expression();
+    consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after value.");
+    emit_byte(OpCode::OP_PRINT);
+}
+
+void Compiler::expression_statement() {
+    expression();
+    consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after expression.");
+    emit_byte(OpCode::OP_POP);
+}
+
 void Compiler::expression() {
     // Parse lowest precedence as higher precedence operators will
     // take over
     parse_precedence(Precedence::PREC_ASSIGNMENT);
 }
 
-void Compiler::grouping() {
+void Compiler::grouping(bool can_assign) {
     expression();
     consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-void Compiler::unary() {
+void Compiler::unary(bool can_assign) {
     TokenType operator_type = m_parser.m_previous.get_type();
 
     // Compile the operand, only compile the expression immediately to the right of
@@ -72,7 +190,7 @@ void Compiler::unary() {
     }
 }
 
-void Compiler::binary() {
+void Compiler::binary(bool can_assign) {
     TokenType operator_type = m_parser.m_previous.get_type();
     ParseRule rule = get_rule(operator_type);
     Precedence current_precedence = static_cast<Precedence>(static_cast<int>(rule.m_precedence) + 1);
@@ -127,12 +245,12 @@ void Compiler::advance() {
     }
 }
 
-void Compiler::number() {
+void Compiler::number(bool can_assign) {
     Value value = std::stod(m_parser.m_previous.get_lexeme());
     emit_constant(value);
 }
 
-void Compiler::literal() {
+void Compiler::literal(bool can_assign) {
     switch (m_parser.m_previous.get_type()) {
     case TokenType::TOKEN_FALSE:
         emit_byte(OpCode::OP_FALSE);
@@ -149,9 +267,13 @@ void Compiler::literal() {
     }
 }
 
-void Compiler::string() {
+void Compiler::string(bool can_assign) {
     std::string str = m_parser.m_previous.get_lexeme().substr(1, m_parser.m_previous.get_lexeme().length() - 2);
     emit_constant(std::move(make_obj_string(std::move(str))));
+}
+
+void Compiler::variable(bool can_assign) {
+    named_variable(m_parser.m_previous, can_assign);
 }
 
 void Compiler::consume(TokenType token_type, const std::string& message) {
@@ -173,18 +295,22 @@ void Compiler::parse_precedence(Precedence precedence) {
         return;
     }
 
-    (prefix_rule.value())();
+    // only parse assignments if the current precedence is at PREC_ASSIGNMENT or lower
+    bool can_assign = precedence <= Precedence::PREC_ASSIGNMENT;
+    (prefix_rule.value())(can_assign);
 
-    // keep parsing, looking for infix parse rules if the token has higher precedence than the current one
-    // if we find a infix rule that has higher precedence then finish current parse and emit bytes,
-    // as in the rule parsed now takes precedence over the current parse rule so continue looking.
+    // keep parsing, looking for infix parse rules if the current token has higher precedence than the previous one
+    // if we find a infix rule that has higher precedence then parse it and emit bytes.
     while (precedence <= get_rule(m_parser.m_current.get_type()).m_precedence) {
-        // if the current token is say a + (with an infix parse rule), we advance and parse.
-        // in this case, we go to binary parse rule which we then come back here, going to prefix parse rule
-        // for number, thus we are able to emit 2 constant bytes and then a binary op
+        // recursively parse infix rules while the current parsed token has greater precedence than
+        // the previously parse token
         advance();
         std::optional<ParseFn> infix_rule = get_rule(m_parser.m_previous.get_type()).m_infix;
-        (infix_rule.value())();
+        (infix_rule.value())(can_assign);
+    }
+
+    if (can_assign && match(TokenType::TOKEN_EQUAL)) {
+        error("Invalid assignment target.");
     }
 }
 

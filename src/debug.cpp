@@ -38,21 +38,29 @@ usize disassemble_instruction(const Chunk& chunk, usize offset) {
     u8 instruction = chunk.get_code().at(offset);
     switch (instruction) {
     case OpCode::OP_RETURN:
-        offset = ::simple_instruction("OP_RETURN", offset);
-        break;
+        return simple_instruction("OP_RETURN", offset);
+    case OpCode::OP_PRINT:
+        return simple_instruction("OP_PRINT", offset);
     case OpCode::OP_NEGATE:
         return simple_instruction("OP_NEGATE", offset);
     case OpCode::OP_CONSTANT:
-        offset = ::constant_instruction("OP_CONSTANT", chunk, offset);
-        break;
+        return constant_instruction("OP_CONSTANT", chunk, offset);
     case OpCode::OP_NIL:
         return simple_instruction("OP_NIL", offset);
     case OpCode::OP_TRUE:
         return simple_instruction("OP_TRUE", offset);
     case OpCode::OP_FALSE:
         return simple_instruction("OP_FALSE", offset);
+    case OpCode::OP_POP:
+        return simple_instruction("OP_POP", offset);
+    case OpCode::OP_SET_GLOBAL:
+        return constant_instruction("OP_SET_GLOBAL", chunk, offset);
     case OpCode::OP_EQUAL:
         return simple_instruction("OP_EQUAL", offset);
+    case OpCode::OP_GET_GLOBAL:
+        return constant_instruction("OP_GET_GLOBAL", chunk, offset);
+    case OpCode::OP_DEFINE_GLOBAL:
+        return constant_instruction("OP_DEFINE_GLOBAL", chunk, offset);
     case OpCode::OP_GREATER:
         return simple_instruction("OP_GREATER", offset);
     case OpCode::OP_LESS:

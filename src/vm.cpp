@@ -18,9 +18,9 @@ namespace vm {
 VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
     : m_chunk{std::move(chunk)},
       m_ip{0},
-      m_table{} {
-    m_stack.reserve(256);
-}
+      m_strings{},
+      m_globals{},
+      m_stack_top{0} {}
 
 void VirtualMachine::load_new_chunk(std::shared_ptr<chunk::Chunk> chunk) {
     m_chunk = std::move(chunk);
@@ -31,12 +31,15 @@ InterpretResult VirtualMachine::run() {
     InterpretResult result = INTERPRET_RUNTIME_ERROR;
     while (m_ip < m_chunk->size()) {
 #ifdef DEBUG_TRACE_EXECUTION
-        for (const auto& value : m_stack) {
-            println("\t[ {} ]", value_to_string(value));
+        for (u8 i = 0; i < m_stack_top; i++) {
+            println("\t[ {} ]", value_to_string(m_stack[i]));
         }
         disassemble_instruction(*m_chunk, m_ip);
 #endif
         result = run_step();
+        if (result != INTERPRET_OK) {
+            return result;
+        }
     }
     return result;
 }
@@ -44,39 +47,68 @@ InterpretResult VirtualMachine::run() {
 InterpretResult VirtualMachine::run_step() {
     u8 instruction = read_byte();
     switch (instruction) {
-    case OP_CONSTANT: {
+    case OpCode::OP_CONSTANT: {
         Value constant = read_constant();
         push(constant);
         break;
     }
-    case OP_NIL:
+    case OpCode::OP_NIL:
         push(nullptr);
         break;
-    case OP_TRUE:
+    case OpCode::OP_TRUE:
         push(true);
         break;
-    case OP_FALSE:
+    case OpCode::OP_FALSE:
         push(false);
         break;
-    case OP_EQUAL: {
+    case OpCode::OP_POP:
+        pop();
+        break;
+    case OpCode::OP_GET_GLOBAL: {
+        ObjString name = std::get<ObjString>(read_constant());
+        Value value;
+        if (!m_globals.get(name, value)) {
+            runtime_error("Undefined variable '" + name.str + "'.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        push(value);
+        break;
+    }
+    case OpCode::OP_DEFINE_GLOBAL: {
+        ObjString name = std::get<ObjString>(read_constant());
+        m_globals.set(name, peek_stack_top());
+        pop();
+        break;
+    }
+    case OpCode::OP_SET_GLOBAL: {
+        ObjString name = std::get<ObjString>(read_constant());
+        // when we set, we haven't defined it before
+        if (m_globals.set(name, peek_stack_top())) {
+            // delete old value for continuous use in repl
+            m_globals.del(name);
+            runtime_error("Undefined variable '" + name.str + "'.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
+    }
+    case OpCode::OP_EQUAL: {
         Value rhs = pop();
         Value lhs = pop();
         const auto result = lhs == rhs;
         push(result);
         break;
     }
-    case OP_GREATER:
+    case OpCode::OP_GREATER:
         binary_greater_op();
         break;
-    case OP_LESS:
+    case OpCode::OP_LESS:
         binary_less_op();
         break;
-    case OP_ADD: {
+    case OpCode::OP_ADD: {
         const Value& stack_top = peek_stack_top();
         const Value& stack_top_prev = peek(1);
         if (std::holds_alternative<ObjString>(stack_top) && std::holds_alternative<ObjString>(stack_top_prev)) {
-            std::string new_string = std::get<ObjString>(stack_top_prev).str + std::get<ObjString>(stack_top).str;
-            push(std::move(make_obj_string_interned(m_table, std::move(new_string))));
+            concatenate();
         } else if (std::holds_alternative<double>(stack_top) && std::holds_alternative<double>(stack_top_prev)) {
             binary_add_op();
         } else {
@@ -85,19 +117,19 @@ InterpretResult VirtualMachine::run_step() {
         }
         break;
     }
-    case OP_SUBTRACT:
+    case OpCode::OP_SUBTRACT:
         binary_subtract_op();
         break;
-    case OP_MULTIPLY:
+    case OpCode::OP_MULTIPLY:
         binary_multiply_op();
         break;
-    case OP_DIVIDE:
+    case OpCode::OP_DIVIDE:
         binary_divide_op();
         break;
-    case OP_NOT:
+    case OpCode::OP_NOT:
         push(is_falsey(pop()));
         break;
-    case OP_NEGATE: {
+    case OpCode::OP_NEGATE: {
         if (!std::holds_alternative<double>(peek_stack_top())) {
             runtime_error("Operand must be a number.");
             return INTERPRET_RUNTIME_ERROR;
@@ -106,14 +138,19 @@ InterpretResult VirtualMachine::run_step() {
         push(negated_value);
         break;
     }
-    case OP_RETURN: {
-        println("{}", value_to_string(pop()));
+    case OpCode::OP_PRINT: {
+        std::visit(print_visitor{}, pop());
+        println("");
+        break;
+    }
+    case OpCode::OP_RETURN: {
+        // Exit virtual machine
         return INTERPRET_OK;
     }
     default:
         return INTERPRET_RUNTIME_ERROR;
     }
-    return INTERPRET_RUNTIME_ERROR;
+    return INTERPRET_OK;
 }
 
 usize VirtualMachine::get_ip() const {
@@ -129,7 +166,8 @@ Value VirtualMachine::read_constant() {
 }
 
 void VirtualMachine::push(Value value) {
-    m_stack.emplace_back(value);
+    m_stack[m_stack_top] = std::move(value);
+    m_stack_top++;
 }
 
 const Value& VirtualMachine::peek_stack_top() const {
@@ -137,16 +175,16 @@ const Value& VirtualMachine::peek_stack_top() const {
 }
 
 const Value& VirtualMachine::peek(usize n) const {
-    return m_stack.at(m_stack.size() - 1 - n);
+    return m_stack[m_stack_top - 1 - n];
 }
 
 Value VirtualMachine::pop() {
-    Value stack_top = m_stack.back();
-    m_stack.pop_back();
-    return stack_top;
+    m_stack_top--;
+    return m_stack[m_stack_top];
 }
 
 void VirtualMachine::runtime_error(const std::string& message) {
+    print_err("{}", message);
     usize line = m_chunk->get_lines().at(m_ip);
     println_err("[line {}] in script", line);
 }
@@ -161,6 +199,13 @@ bool VirtualMachine::is_falsey(Value value) {
     }
 
     return false;
+}
+
+inline void VirtualMachine::concatenate() {
+    ObjString rhs = std::get<ObjString>(pop());
+    ObjString lhs = std::get<ObjString>(pop());
+    std::string new_string = lhs.str + rhs.str;
+    push(std::move(make_obj_string_interned(m_strings, std::move(new_string))));
 }
 
 inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, double& out_rhs) {

@@ -12,6 +12,10 @@ enum OpCode : u8 {
     OP_NIL,
     OP_TRUE,
     OP_FALSE,
+    OP_POP,
+    OP_GET_GLOBAL,
+    OP_DEFINE_GLOBAL,
+    OP_SET_GLOBAL,
     // we can optimize performance by creating dedicated
     // instructions for other side of equality operators
     OP_EQUAL,
@@ -23,6 +27,7 @@ enum OpCode : u8 {
     OP_DIVIDE,
     OP_NOT,
     OP_NEGATE,
+    OP_PRINT,
     OP_RETURN
 };
 

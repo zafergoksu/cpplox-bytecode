@@ -4,6 +4,7 @@
 #include "table.h"
 #include "value.h"
 
+#include <array>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -38,6 +39,7 @@ private:
     void runtime_error(const std::string& message);
 
     bool is_falsey(value::Value value);
+    inline void concatenate();
     inline InterpretResult pop_binary_operands(double& lhs, double& rhs);
     inline InterpretResult binary_add_op();
     inline InterpretResult binary_subtract_op();
@@ -48,8 +50,10 @@ private:
 
     std::shared_ptr<const chunk::Chunk> m_chunk;
     usize m_ip;
-    table::Table m_table;
-    std::vector<value::Value> m_stack;
+    table::Table m_strings;
+    table::Table m_globals;
+    u8 m_stack_top;
+    std::array<value::Value, UINT8_MAX + 1> m_stack;
 };
 
 } // namespace vm
