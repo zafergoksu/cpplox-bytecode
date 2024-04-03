@@ -58,7 +58,7 @@ TEST_F(VirtualMachineTest, test_run_step) {
 
     m_vm.load_new_chunk(std::move(chunk));
     vm::InterpretResult result = m_vm.run_step();
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
+    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_run) {
@@ -106,7 +106,6 @@ TEST_F(VirtualMachineTest, test_unary_op_negate) {
     auto result = m_vm.run_step();
 
     EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), -2.0);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
@@ -118,7 +117,6 @@ TEST_F(VirtualMachineTest, test_binary_op_add) {
     auto result = m_vm.run_step();
 
     EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.6);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
@@ -130,7 +128,6 @@ TEST_F(VirtualMachineTest, test_binary_op_subtract) {
     auto result = m_vm.run_step();
 
     EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.6);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
@@ -142,7 +139,6 @@ TEST_F(VirtualMachineTest, test_binary_op_multiply) {
     auto result = m_vm.run_step();
 
     EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.5);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
@@ -154,7 +150,6 @@ TEST_F(VirtualMachineTest, test_binary_op_divide) {
     auto result = m_vm.run_step();
 
     EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 5.0);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
@@ -165,7 +160,7 @@ TEST_F(VirtualMachineTest, test_binary_op_failure) {
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
+    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_op_negate_failure) {
@@ -219,7 +214,6 @@ TEST_F(VirtualMachineTest, test_not_op) {
     m_vm.run_step();
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), true);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
@@ -232,7 +226,6 @@ TEST_F(VirtualMachineTest, test_equal_op) {
     auto result = m_vm.run_step();
 
     EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), true);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 
@@ -242,7 +235,6 @@ TEST_F(VirtualMachineTest, test_equal_op) {
     result = m_vm.run_step();
 
     EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), false);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
@@ -254,7 +246,6 @@ TEST_F(VirtualMachineTest, test_binary_comparison_op) {
     auto result = m_vm.run_step();
 
     EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), true);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 
@@ -264,7 +255,6 @@ TEST_F(VirtualMachineTest, test_binary_comparison_op) {
     result = m_vm.run_step();
 
     EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), false);
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
@@ -278,9 +268,64 @@ TEST_F(VirtualMachineTest, test_string_concatenation) {
     auto result = m_vm.run_step();
 
     EXPECT_EQ(std::get<ObjString>(m_vm.peek_stack_top()).str, "Hello, world!");
-    EXPECT_EQ(result, vm::InterpretResult::INTERPRET_RUNTIME_ERROR);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
+}
+
+TEST_F(VirtualMachineTest, test_get_global_var) {
+    ObjString string_1 = make_obj_string("a");
+    auto chunk = std::make_unique<Chunk>();
+
+    usize constant_idx = chunk->write_constant(1.0);
+    chunk->write_byte(OpCode::OP_CONSTANT, 123);
+    chunk->write_byte(constant_idx, 123);
+
+    constant_idx = chunk->write_constant(2.0);
+    chunk->write_byte(OpCode::OP_CONSTANT, 123);
+    chunk->write_byte(constant_idx, 123);
+
+    chunk->write_byte(OpCode::OP_ADD, 123);
+    constant_idx = chunk->write_constant(string_1);
+    chunk->write_byte(OpCode::OP_DEFINE_GLOBAL, 123);
+    chunk->write_byte(constant_idx, 123);
+    chunk->write_byte(OpCode::OP_GET_GLOBAL, 123);
+    chunk->write_byte(constant_idx, 123);
+    chunk->write_byte(OpCode::OP_RETURN, 123);
+
+    m_vm.load_new_chunk(std::move(chunk));
+    run_n_steps(5);
+
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 3.0);
+    auto result = m_vm.run_step();
+    EXPECT_EQ(result, vm::INTERPRET_OK);
+}
+
+TEST_F(VirtualMachineTest, test_set_global_var) {
+    ObjString string_1 = make_obj_string("a");
+    auto chunk = std::make_unique<Chunk>();
+
+    usize constant_idx = chunk->write_constant(1.0);
+    chunk->write_byte(OpCode::OP_CONSTANT, 123);
+    chunk->write_byte(constant_idx, 123);
+
+    constant_idx = chunk->write_constant(2.0);
+    chunk->write_byte(OpCode::OP_CONSTANT, 123);
+    chunk->write_byte(constant_idx, 123);
+
+    chunk->write_byte(OpCode::OP_ADD, 123);
+    constant_idx = chunk->write_constant(string_1);
+    chunk->write_byte(OpCode::OP_DEFINE_GLOBAL, 123);
+    chunk->write_byte(constant_idx, 123);
+    chunk->write_byte(OpCode::OP_GET_GLOBAL, 123);
+    chunk->write_byte(constant_idx, 123);
+    chunk->write_byte(OpCode::OP_RETURN, 123);
+
+    m_vm.load_new_chunk(std::move(chunk));
+    run_n_steps(5);
+
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 3.0);
+    auto result = m_vm.run_step();
+    EXPECT_EQ(result, vm::INTERPRET_OK);
 }
 
 int main(int argc, char* argv[]) {

@@ -4,6 +4,7 @@
 #include "table.h"
 #include "value.h"
 
+#include <array>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -51,7 +52,8 @@ private:
     usize m_ip;
     table::Table m_strings;
     table::Table m_globals;
-    std::vector<value::Value> m_stack;
+    u8 m_stack_top;
+    std::array<value::Value, UINT8_MAX + 1> m_stack;
 };
 
 } // namespace vm

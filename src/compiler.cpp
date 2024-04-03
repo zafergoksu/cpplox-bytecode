@@ -84,9 +84,15 @@ void Compiler::define_variable(u8 global) {
     emit_bytes(OpCode::OP_DEFINE_GLOBAL, global);
 }
 
-void Compiler::named_variable(const token::Token& name) {
+void Compiler::named_variable(const token::Token& name, bool can_assign) {
     u8 arg = identifier_constant(name);
-    emit_bytes(OpCode::OP_GET_GLOBAL, arg);
+
+    if (can_assign && match(TokenType::TOKEN_EQUAL)) {
+        expression();
+        emit_bytes(OpCode::OP_SET_GLOBAL, arg);
+    } else {
+        emit_bytes(OpCode::OP_GET_GLOBAL, arg);
+    }
 }
 
 bool Compiler::match(token::TokenType token_type) {
@@ -158,12 +164,12 @@ void Compiler::expression() {
     parse_precedence(Precedence::PREC_ASSIGNMENT);
 }
 
-void Compiler::grouping() {
+void Compiler::grouping(bool can_assign) {
     expression();
     consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-void Compiler::unary() {
+void Compiler::unary(bool can_assign) {
     TokenType operator_type = m_parser.m_previous.get_type();
 
     // Compile the operand, only compile the expression immediately to the right of
@@ -184,7 +190,7 @@ void Compiler::unary() {
     }
 }
 
-void Compiler::binary() {
+void Compiler::binary(bool can_assign) {
     TokenType operator_type = m_parser.m_previous.get_type();
     ParseRule rule = get_rule(operator_type);
     Precedence current_precedence = static_cast<Precedence>(static_cast<int>(rule.m_precedence) + 1);
@@ -239,12 +245,12 @@ void Compiler::advance() {
     }
 }
 
-void Compiler::number() {
+void Compiler::number(bool can_assign) {
     Value value = std::stod(m_parser.m_previous.get_lexeme());
     emit_constant(value);
 }
 
-void Compiler::literal() {
+void Compiler::literal(bool can_assign) {
     switch (m_parser.m_previous.get_type()) {
     case TokenType::TOKEN_FALSE:
         emit_byte(OpCode::OP_FALSE);
@@ -261,13 +267,13 @@ void Compiler::literal() {
     }
 }
 
-void Compiler::string() {
+void Compiler::string(bool can_assign) {
     std::string str = m_parser.m_previous.get_lexeme().substr(1, m_parser.m_previous.get_lexeme().length() - 2);
     emit_constant(std::move(make_obj_string(std::move(str))));
 }
 
-void Compiler::variable() {
-    named_variable(m_parser.m_previous);
+void Compiler::variable(bool can_assign) {
+    named_variable(m_parser.m_previous, can_assign);
 }
 
 void Compiler::consume(TokenType token_type, const std::string& message) {
@@ -289,18 +295,22 @@ void Compiler::parse_precedence(Precedence precedence) {
         return;
     }
 
-    (prefix_rule.value())();
+    // only parse assignments if the current precedence is at PREC_ASSIGNMENT or lower
+    bool can_assign = precedence <= Precedence::PREC_ASSIGNMENT;
+    (prefix_rule.value())(can_assign);
 
-    // keep parsing, looking for infix parse rules if the token has higher precedence than the current one
-    // if we find a infix rule that has higher precedence then finish current parse and emit bytes,
-    // as in the rule parsed now takes precedence over the current parse rule so continue looking.
+    // keep parsing, looking for infix parse rules if the current token has higher precedence than the previous one
+    // if we find a infix rule that has higher precedence then parse it and emit bytes.
     while (precedence <= get_rule(m_parser.m_current.get_type()).m_precedence) {
-        // if the current token is say a + (with an infix parse rule), we advance and parse.
-        // in this case, we go to binary parse rule which we then come back here, going to prefix parse rule
-        // for number, thus we are able to emit 2 constant bytes and then a binary op
+        // recursively parse infix rules while the current parsed token has greater precedence than
+        // the previously parse token
         advance();
         std::optional<ParseFn> infix_rule = get_rule(m_parser.m_previous.get_type()).m_infix;
-        (infix_rule.value())();
+        (infix_rule.value())(can_assign);
+    }
+
+    if (can_assign && match(TokenType::TOKEN_EQUAL)) {
+        error("Invalid assignment target.");
     }
 }
 

@@ -19,9 +19,8 @@ VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
     : m_chunk{std::move(chunk)},
       m_ip{0},
       m_strings{},
-      m_globals{} {
-    m_stack.reserve(256);
-}
+      m_globals{},
+      m_stack_top{0} {}
 
 void VirtualMachine::load_new_chunk(std::shared_ptr<chunk::Chunk> chunk) {
     m_chunk = std::move(chunk);
@@ -32,8 +31,8 @@ InterpretResult VirtualMachine::run() {
     InterpretResult result = INTERPRET_RUNTIME_ERROR;
     while (m_ip < m_chunk->size()) {
 #ifdef DEBUG_TRACE_EXECUTION
-        for (const auto& value : m_stack) {
-            println("\t[ {} ]", value_to_string(value));
+        for (u8 i = 0; i < m_stack_top; i++) {
+            println("\t[ {} ]", value_to_string(m_stack[i]));
         }
         disassemble_instruction(*m_chunk, m_ip);
 #endif
@@ -79,6 +78,17 @@ InterpretResult VirtualMachine::run_step() {
         ObjString name = std::get<ObjString>(read_constant());
         m_globals.set(name, peek_stack_top());
         pop();
+        break;
+    }
+    case OpCode::OP_SET_GLOBAL: {
+        ObjString name = std::get<ObjString>(read_constant());
+        // when we set, we haven't defined it before
+        if (m_globals.set(name, peek_stack_top())) {
+            // delete old value for continuous use in repl
+            m_globals.del(name);
+            runtime_error("Undefined variable '" + name.str + "'.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
         break;
     }
     case OpCode::OP_EQUAL: {
@@ -140,7 +150,7 @@ InterpretResult VirtualMachine::run_step() {
     default:
         return INTERPRET_RUNTIME_ERROR;
     }
-    return INTERPRET_RUNTIME_ERROR;
+    return INTERPRET_OK;
 }
 
 usize VirtualMachine::get_ip() const {
@@ -156,7 +166,8 @@ Value VirtualMachine::read_constant() {
 }
 
 void VirtualMachine::push(Value value) {
-    m_stack.emplace_back(value);
+    m_stack[m_stack_top] = std::move(value);
+    m_stack_top++;
 }
 
 const Value& VirtualMachine::peek_stack_top() const {
@@ -164,13 +175,12 @@ const Value& VirtualMachine::peek_stack_top() const {
 }
 
 const Value& VirtualMachine::peek(usize n) const {
-    return m_stack.at(m_stack.size() - 1 - n);
+    return m_stack[m_stack_top - 1 - n];
 }
 
 Value VirtualMachine::pop() {
-    Value stack_top = m_stack.back();
-    m_stack.pop_back();
-    return stack_top;
+    m_stack_top--;
+    return m_stack[m_stack_top];
 }
 
 void VirtualMachine::runtime_error(const std::string& message) {

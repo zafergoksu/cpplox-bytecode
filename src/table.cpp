@@ -12,20 +12,8 @@ namespace table {
 Table::Table() : m_entries{k_initial_capacity} {}
 
 bool Table::set(ObjString& key, Value value) {
-    if (m_entries.size() + 1 > static_cast<u32>(static_cast<float>(m_entries.capacity()) * k_max_load)) {
-        // adjust_capacity(m_capacity * 2);
-        m_entries.resize(m_entries.capacity() * 2);
-    }
-
     Entry* entry = find_entry(key);
     bool is_new_key = entry->key == std::nullopt;
-
-    // we are not counting tombstones if we get a free entry to use that is a
-    // tombstone
-    // if (is_new_key && std::holds_alternative<std::nullptr_t>(entry.value)) {
-    //     m_count++;
-    // }
-
     entry->key = key;
     entry->value = value;
     return is_new_key;
@@ -121,27 +109,4 @@ std::optional<ObjString> Table::find_string(const std::string& value, u32 hash) 
         index = (index + 1) % m_entries.capacity();
     }
 }
-
-// void Table::adjust_capacity(u32 new_capacity) {
-//     auto entries = std::make_unique<Entry[]>(new_capacity);
-//
-//     // by rebuilding the table when adjusting the capacity,
-//     // we reset the count to disard tombstones
-//     m_count = 0;
-//     for (u32 i = 0; i < m_capacity; i++) {
-//         Entry* entry = &m_entries[i];
-//         if (entry->key == nullptr) {
-//             continue;
-//         }
-//
-//         Entry* dest = find_entry(entries, new_capacity, entry->key);
-//         dest->key = entry->key;
-//         dest->value = entry->value;
-//         m_count++;
-//     }
-//
-//     m_capacity = new_capacity;
-//     m_entries = std::move(entries);
-// }
-
 } // namespace table

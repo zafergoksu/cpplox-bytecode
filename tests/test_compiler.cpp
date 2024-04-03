@@ -15,6 +15,8 @@ using namespace value;
 
 using testing::Eq;
 
+// TODO(zafergoksu): expand tests to read from files
+
 class CompilerTest : public testing::Test {
 protected:
     static std::string test_number_literals() {
