@@ -19,6 +19,11 @@ struct Parser {
     bool m_panic_mode;
 };
 
+struct Local {
+    token::Token m_name;
+    int m_depth;
+};
+
 enum class Precedence {
     PREC_NONE,
     PREC_ASSIGNMENT, // =
