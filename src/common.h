@@ -14,6 +14,8 @@ typedef std::int32_t i32;
 typedef std::int64_t i64;
 typedef std::ptrdiff_t isize;
 
+#define UINT8_COUNT (UINT8_MAX + 1)
+
 #ifndef NDEBUG
 #define DEBUG_TRACE_EXECUTION
 #define DEBUG_PRINT_CODE
