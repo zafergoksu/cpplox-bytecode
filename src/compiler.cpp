@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -19,12 +20,18 @@ using namespace value;
 
 namespace compiler {
 
+Local::Local()
+    : m_name{TokenType::TOKEN_EOF, "", 0},
+      m_depth{std::nullopt} {}
+
 Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Chunk> chunk)
     : m_scanner{std::move(scanner)},
       m_parser{Token{TokenType::TOKEN_EOF, "", 1},
                Token{TokenType::TOKEN_EOF, "", 1},
                false,
                false},
+      m_local_count{0},
+      m_scope_depth{0},
       m_chunk{std::move(chunk)} {}
 
 bool Compiler::compile() {
@@ -72,7 +79,21 @@ void Compiler::synchronize() {
 
 u8 Compiler::parse_variable(const std::string& error_msg) {
     consume(TokenType::TOKEN_IDENTIFIER, error_msg);
+
+    declare_variable();
+    if (m_scope_depth > 0) {
+        // look up on stack rather than constant table to hash table value
+        return 0;
+    }
+
     return identifier_constant(m_parser.m_previous);
+}
+
+void Compiler::mark_initialized() {
+    if (m_locals[m_local_count - 1].m_depth == std::nullopt) {
+        return;
+    }
+    m_locals[m_local_count - 1].m_depth.value() = m_scope_depth;
 }
 
 u8 Compiler::identifier_constant(const token::Token& token) {
@@ -80,18 +101,94 @@ u8 Compiler::identifier_constant(const token::Token& token) {
     return make_constant(std::move(obj_string));
 }
 
+std::optional<u8> Compiler::resolve_local(const Token& name) {
+    for (int i = m_local_count - 1; i >= 0; i--) {
+        const Local& local = m_locals[i];
+        if (local.m_name.get_lexeme() == name.get_lexeme()) {
+            if (local.m_depth == std::nullopt) {
+                error("Can't read local variable in its own initializer.");
+            }
+            return i;
+        }
+    }
+
+    return std::nullopt;
+}
+
+void Compiler::add_local(const Token& name) {
+    if (m_local_count == UINT8_COUNT) {
+        error("Too many local variables in function.");
+        return;
+    }
+    Local& local = m_locals[m_local_count++];
+    local.m_name = name;
+    local.m_depth = std::nullopt;
+}
+
+void Compiler::declare_variable() {
+    if (m_scope_depth == 0) {
+        return;
+    }
+
+    const Token& name = m_parser.m_previous;
+
+    for (int i = m_local_count - 1; i >= 0; i--) {
+        const Local& local = m_locals[i];
+        // check the local variables from the end of the array
+        // to the beginning. if a variable has a depth lower than
+        // the current, it is owned by the preceeding scope.
+        if (local.m_depth != std::nullopt && local.m_depth.value() < m_scope_depth) {
+            break;
+        }
+
+        if (name.get_lexeme() == local.m_name.get_lexeme()) {
+            error("Already a variable with this name in this scope.");
+        }
+    }
+
+    add_local(name);
+}
+
 void Compiler::define_variable(u8 global) {
+    if (m_scope_depth > 0) {
+        mark_initialized();
+        return;
+    }
     emit_bytes(OpCode::OP_DEFINE_GLOBAL, global);
 }
 
 void Compiler::named_variable(const token::Token& name, bool can_assign) {
-    u8 arg = identifier_constant(name);
+    u8 get_op = 0;
+    u8 set_op = 0;
+    std::optional<u8> arg = resolve_local(name);
+
+    if (arg) {
+        get_op = OpCode::OP_GET_LOCAL;
+        set_op = OpCode::OP_SET_LOCAL;
+    } else {
+        arg = identifier_constant(name);
+        get_op = OpCode::OP_GET_GLOBAL;
+        set_op = OpCode::OP_SET_GLOBAL;
+    }
 
     if (can_assign && match(TokenType::TOKEN_EQUAL)) {
         expression();
-        emit_bytes(OpCode::OP_SET_GLOBAL, arg);
+        emit_bytes(set_op, arg.value());
     } else {
-        emit_bytes(OpCode::OP_GET_GLOBAL, arg);
+        emit_bytes(get_op, arg.value());
+    }
+}
+
+void Compiler::begin_scope() {
+    m_scope_depth++;
+}
+
+void Compiler::end_scope() {
+    m_scope_depth--;
+
+    while (m_local_count > 0 && m_locals[m_local_count - 1].m_depth != std::nullopt && m_locals[m_local_count - 1].m_depth.value() > m_scope_depth) {
+        emit_byte(OpCode::OP_POP);
+        m_local_count--;
     }
 }
 
@@ -111,6 +208,10 @@ bool Compiler::check(token::TokenType token_type) {
 void Compiler::statement() {
     if (match(TokenType::TOKEN_PRINT)) {
         print_statement();
+    } else if (match(TokenType::TOKEN_LEFT_BRACE)) {
+        begin_scope();
+        block_statement();
+        end_scope();
     } else {
         expression_statement();
     }
@@ -156,6 +257,14 @@ void Compiler::expression_statement() {
     expression();
     consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after expression.");
     emit_byte(OpCode::OP_POP);
+}
+
+void Compiler::block_statement() {
+    while (!check(TokenType::TOKEN_RIGHT_BRACE) && !check(TokenType::TOKEN_EOF)) {
+        declaration();
+    }
+
+    consume(TokenType::TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
 void Compiler::expression() {

@@ -5,6 +5,7 @@
 #include "scanner.h"
 #include "token.h"
 #include "value.h"
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -17,6 +18,12 @@ struct Parser {
     token::Token m_previous;
     bool m_had_error;
     bool m_panic_mode;
+};
+
+struct Local {
+    Local();
+    token::Token m_name;
+    std::optional<u8> m_depth;
 };
 
 enum class Precedence {
@@ -58,6 +65,7 @@ private:
     void var_declaration();
     void print_statement();
     void expression_statement();
+    void block_statement();
 
     // expressions
     void expression();
@@ -74,9 +82,15 @@ private:
     const ParseRule& get_rule(token::TokenType token_type);
     void synchronize();
     u8 parse_variable(const std::string& error_msg);
+    void mark_initialized();
     u8 identifier_constant(const token::Token& token);
+    std::optional<u8> resolve_local(const token::Token& name);
+    void add_local(const token::Token& name);
+    void declare_variable();
     void define_variable(u8 global);
     void named_variable(const token::Token& name, bool can_assign);
+    void begin_scope();
+    void end_scope();
 
     void emit_byte(u8 byte);
     void emit_bytes(u8 byte_1, u8 byte_2);
@@ -90,6 +104,9 @@ private:
     void error_at(const token::Token& token, const std::string& message);
 
     Parser m_parser;
+    std::array<Local, UINT8_COUNT> m_locals;
+    int m_local_count;
+    int m_scope_depth;
     std::shared_ptr<scanner::Scanner> m_scanner;
     std::shared_ptr<chunk::Chunk> m_chunk;
 

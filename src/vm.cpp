@@ -64,6 +64,17 @@ InterpretResult VirtualMachine::run_step() {
     case OpCode::OP_POP:
         pop();
         break;
+    case OpCode::OP_GET_LOCAL: {
+        u8 slot = read_byte();
+        // get the index to the local variable slot (compiler and vm local var stacks match)
+        // and push it back on top as we require other instructions to look at top of stack
+        push(m_stack[slot]);
+        break;
+    }
+    case OpCode::OP_SET_LOCAL: {
+        u8 slot = read_byte();
+        m_stack[slot] = peek_stack_top();
+    }
     case OpCode::OP_GET_GLOBAL: {
         ObjString name = std::get<ObjString>(read_constant());
         Value value;
