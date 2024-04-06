@@ -74,6 +74,7 @@ InterpretResult VirtualMachine::run_step() {
     case OpCode::OP_SET_LOCAL: {
         u8 slot = read_byte();
         m_stack[slot] = peek_stack_top();
+        break;
     }
     case OpCode::OP_GET_GLOBAL: {
         ObjString name = std::get<ObjString>(read_constant());

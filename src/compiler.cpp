@@ -90,10 +90,7 @@ u8 Compiler::parse_variable(const std::string& error_msg) {
 }
 
 void Compiler::mark_initialized() {
-    if (m_locals[m_local_count - 1].m_depth == std::nullopt) {
-        return;
-    }
-    m_locals[m_local_count - 1].m_depth.value() = m_scope_depth;
+    m_locals[m_local_count - 1].m_depth = m_scope_depth;
 }
 
 u8 Compiler::identifier_constant(const token::Token& token) {
