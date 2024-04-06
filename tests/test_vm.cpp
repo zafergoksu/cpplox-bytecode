@@ -328,6 +328,45 @@ TEST_F(VirtualMachineTest, test_set_global_var) {
     EXPECT_EQ(result, vm::INTERPRET_OK);
 }
 
+TEST_F(VirtualMachineTest, test_get_local_var) {
+    auto chunk = std::make_unique<Chunk>();
+
+    usize constant_idx = chunk->write_constant(10.0);
+    chunk->write_byte(OpCode::OP_CONSTANT, 123);
+    chunk->write_byte(constant_idx, 123);
+    chunk->write_byte(OpCode::OP_GET_LOCAL, 123);
+    chunk->write_byte(0, 123);
+    chunk->write_byte(OpCode::OP_POP, 123);
+
+    m_vm.load_new_chunk(std::move(chunk));
+    run_n_steps(2);
+    auto result = m_vm.run_step();
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 10.0);
+    EXPECT_EQ(result, vm::INTERPRET_OK);
+}
+
+TEST_F(VirtualMachineTest, test_set_local_var) {
+    auto chunk = std::make_unique<Chunk>();
+
+    usize constant_idx = chunk->write_constant(10.0);
+    chunk->write_byte(OpCode::OP_CONSTANT, 123);
+    chunk->write_byte(constant_idx, 123);
+    constant_idx = chunk->write_constant(20.0);
+    chunk->write_byte(OpCode::OP_CONSTANT, 123);
+    chunk->write_byte(constant_idx, 123);
+    chunk->write_byte(OpCode::OP_SET_LOCAL, 123);
+    chunk->write_byte(0, 123);
+    chunk->write_byte(OpCode::OP_POP, 123);
+    chunk->write_byte(OpCode::OP_GET_LOCAL, 123);
+    chunk->write_byte(0, 123);
+
+    m_vm.load_new_chunk(std::move(chunk));
+    run_n_steps(4);
+    auto result = m_vm.run_step();
+    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 20.0);
+    EXPECT_EQ(result, vm::INTERPRET_OK);
+}
+
 int main(int argc, char* argv[]) {
     ::testing::InitGoogleMock(&argc, argv);
     return RUN_ALL_TESTS();

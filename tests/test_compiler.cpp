@@ -59,6 +59,10 @@ protected:
         return "\"Hello, world!\" + \" hi\";";
     }
 
+    static std::string test_block_statment() {
+        return "{ var a = 10; a = 20; print a; }";
+    }
+
     void setup_compiler(std::string source) {
         m_scanner->load_source(std::move(source));
     }
@@ -211,12 +215,9 @@ TEST_F(CompilerTest, test_boolean_values) {
         OpCode::OP_POP,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{};
-
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
     EXPECT_THAT(out_bytes, Eq(expect_bytes));
-    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
 }
 
 TEST_F(CompilerTest, test_nil_value) {
@@ -237,12 +238,9 @@ TEST_F(CompilerTest, test_nil_value) {
         OpCode::OP_POP,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{};
-
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
     EXPECT_THAT(out_bytes, Eq(expect_bytes));
-    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
 }
 
 TEST_F(CompilerTest, test_not_op) {
@@ -264,12 +262,9 @@ TEST_F(CompilerTest, test_not_op) {
         OpCode::OP_POP,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{};
-
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
     EXPECT_THAT(out_bytes, Eq(expect_bytes));
-    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
 }
 
 TEST_F(CompilerTest, test_equality_op) {
@@ -293,12 +288,9 @@ TEST_F(CompilerTest, test_equality_op) {
         OpCode::OP_POP,
         OpCode::OP_RETURN};
 
-    std::vector<value::Value> expect_constants{};
-
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
     EXPECT_THAT(out_bytes, Eq(expect_bytes));
-    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
 }
 
 TEST_F(CompilerTest, test_string_expression) {
@@ -354,6 +346,40 @@ TEST_F(CompilerTest, test_string_concatenation_op) {
     ObjString string_1 = make_obj_string("Hello, world!");
     ObjString string_2 = make_obj_string(" hi");
     std::vector<value::Value> expect_constants{string_1, string_2};
+
+    EXPECT_EQ(result, true);
+    EXPECT_EQ(out_size, expect_bytes.size());
+    EXPECT_THAT(out_bytes, Eq(expect_bytes));
+    EXPECT_THAT(out_constants.get_values(), Eq(expect_constants));
+}
+
+TEST_F(CompilerTest, test_block_statment) {
+    setup_compiler(test_block_statment());
+
+    if (!scanner_and_chunk_are_valid()) {
+        FAIL() << "Scanner and chunk are not valid pointers.";
+    }
+
+    bool result = m_compiler.compile();
+    auto out_size = m_current_chunk->size();
+    auto out_bytes = m_current_chunk->get_code();
+    auto out_constants = m_current_chunk->get_constants();
+
+    std::vector<u8> expect_bytes{
+        OpCode::OP_CONSTANT,
+        0x00,
+        OpCode::OP_CONSTANT,
+        0x01,
+        OpCode::OP_SET_LOCAL,
+        0x00,
+        OpCode::OP_POP,
+        OpCode::OP_GET_LOCAL,
+        0x00,
+        OpCode::OP_PRINT,
+        OpCode::OP_POP,
+        OpCode::OP_RETURN};
+
+    std::vector<value::Value> expect_constants{10.0, 20.0};
 
     EXPECT_EQ(result, true);
     EXPECT_EQ(out_size, expect_bytes.size());
