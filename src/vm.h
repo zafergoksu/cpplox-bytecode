@@ -53,7 +53,7 @@ private:
     table::Table m_strings;
     table::Table m_globals;
     u8 m_stack_top;
-    std::array<value::Value, UINT8_MAX + 1> m_stack;
+    std::array<value::Value, UINT8_COUNT> m_stack;
 };
 
 } // namespace vm
