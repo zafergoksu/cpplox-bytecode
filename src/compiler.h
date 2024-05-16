@@ -66,6 +66,7 @@ private:
     void print_statement();
     void expression_statement();
     void block_statement();
+    void if_statement();
 
     // expressions
     void expression();
@@ -91,6 +92,8 @@ private:
     void named_variable(const token::Token& name, bool can_assign);
     void begin_scope();
     void end_scope();
+    int emit_jump(u8 instruction);
+    void patch_jump(int offset);
 
     void emit_byte(u8 byte);
     void emit_bytes(u8 byte_1, u8 byte_2);

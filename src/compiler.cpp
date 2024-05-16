@@ -189,6 +189,27 @@ void Compiler::end_scope() {
     }
 }
 
+int Compiler::emit_jump(u8 instruction) {
+    emit_byte(instruction);
+    emit_byte(0xff);
+    emit_byte(0xff);
+    return m_chunk->size() - 2;
+}
+
+void Compiler::patch_jump(int offset) {
+    // -2 to adjust for the bytecode for the jump offset itself.
+    int jump = m_chunk->size() - offset - 2;
+
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over.");
+    }
+
+    // high byte
+    m_chunk->write_byte_at(offset, (jump >> 8) & 0xff);
+    // low byte
+    m_chunk->write_byte_at(offset + 1, jump & 0xff);
+}
+
 bool Compiler::match(token::TokenType token_type) {
     if (!check(token_type)) {
         return false;
@@ -205,6 +226,8 @@ bool Compiler::check(token::TokenType token_type) {
 void Compiler::statement() {
     if (match(TokenType::TOKEN_PRINT)) {
         print_statement();
+    } else if (match(TokenType::TOKEN_IF)) {
+        if_statement();
     } else if (match(TokenType::TOKEN_LEFT_BRACE)) {
         begin_scope();
         block_statement();
@@ -262,6 +285,32 @@ void Compiler::block_statement() {
     }
 
     consume(TokenType::TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+}
+
+void Compiler::if_statement() {
+    consume(TokenType::TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+    expression();
+    consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    int then_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
+    // if statements should have zero stack effect, therefore, if we are in the
+    // then branch we pop the condition expression immediately.
+    emit_byte(OpCode::OP_POP);
+    statement();
+
+    // we jump when we are done with the 'then' statement,
+    // patching the 'then' jump
+    int else_jump = emit_jump(OpCode::OP_JUMP);
+
+    patch_jump(then_jump);
+
+    // otherwise we pop it at the beginning of the else branch
+    emit_byte(OpCode::OP_POP);
+
+    if (match(TokenType::TOKEN_ELSE)) {
+        statement();
+    }
+    patch_jump(else_jump);
 }
 
 void Compiler::expression() {

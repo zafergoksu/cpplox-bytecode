@@ -25,10 +25,18 @@ usize constant_instruction(const std::string& name, const Chunk& chunk, usize of
 
     return offset + 2;
 }
+
 usize byte_instruction(const std::string& name, const Chunk& chunk, usize offset) {
     u8 slot = chunk.get_code().at(offset + 1);
     println("{:16s} {:4d}", name, slot);
     return offset + 2;
+}
+
+usize jump_instruction(const std::string& name, int sign, const Chunk& chunk, usize offset) {
+    u16 jump = static_cast<u16>(chunk.get_code().at(offset + 1) << 8);
+    jump |= chunk.get_code().at(offset + 2);
+    println("{:16s} {:4d} -> {:d}", name, offset, offset + 3 + sign * jump);
+    return offset + 3;
 }
 } // namespace
 
@@ -42,6 +50,10 @@ usize disassemble_instruction(const Chunk& chunk, usize offset) {
 
     u8 instruction = chunk.get_code().at(offset);
     switch (instruction) {
+    case OpCode::OP_JUMP:
+        return jump_instruction("OP_JUMP", 1, chunk, offset);
+    case OpCode::OP_JUMP_IF_FALSE:
+        return jump_instruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
     case OpCode::OP_RETURN:
         return simple_instruction("OP_RETURN", offset);
     case OpCode::OP_PRINT:

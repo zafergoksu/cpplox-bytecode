@@ -30,6 +30,8 @@ enum OpCode : u8 {
     OP_NOT,
     OP_NEGATE,
     OP_PRINT,
+    OP_JUMP,
+    OP_JUMP_IF_FALSE,
     OP_RETURN
 };
 
@@ -37,6 +39,7 @@ class Chunk {
 public:
     [[nodiscard]] usize size() const;
     void write_byte(u8 byte, usize line);
+    void write_byte_at(usize offset, u8 byte);
     [[nodiscard]] usize write_constant(value::Value value);
 
     [[nodiscard]] const std::vector<u8>& get_code() const;
