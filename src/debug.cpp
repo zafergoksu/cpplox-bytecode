@@ -54,6 +54,8 @@ usize disassemble_instruction(const Chunk& chunk, usize offset) {
         return jump_instruction("OP_JUMP", 1, chunk, offset);
     case OpCode::OP_JUMP_IF_FALSE:
         return jump_instruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
+    case OpCode::OP_LOOP:
+        return jump_instruction("OP_LOOP", -1, chunk, offset);
     case OpCode::OP_RETURN:
         return simple_instruction("OP_RETURN", offset);
     case OpCode::OP_PRINT:

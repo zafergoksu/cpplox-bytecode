@@ -64,9 +64,11 @@ private:
     void declaration();
     void var_declaration();
     void print_statement();
+    void for_statement();
     void expression_statement();
     void block_statement();
     void if_statement();
+    void while_statement();
 
     // expressions
     void expression();
@@ -77,6 +79,8 @@ private:
     void literal(bool can_assign);
     void string(bool can_assign);
     void variable(bool can_assign);
+    void and_infix(bool can_assign);
+    void or_infix(bool can_assign);
 
     void consume(token::TokenType token_type, const std::string& message);
     void parse_precedence(Precedence precedence);
@@ -100,6 +104,7 @@ private:
     void emit_constant(value::Value value);
     void emit_return();
     void end_compilation();
+    void emit_loop(int loop_start);
     u8 make_constant(value::Value value);
 
     void error_at_current(const std::string& message);
@@ -136,7 +141,7 @@ private:
         {token::TokenType::TOKEN_IDENTIFIER, {std::bind(&Compiler::variable, this, std::placeholders::_1), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_STRING, {std::bind(&Compiler::string, this, std::placeholders::_1), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_NUMBER, {std::bind(&Compiler::number, this, std::placeholders::_1), std::nullopt, Precedence::PREC_NONE}},
-        {token::TokenType::TOKEN_AND, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_AND, {std::nullopt, std::bind(&Compiler::and_infix, this, std::placeholders::_1), Precedence::PREC_AND}},
         {token::TokenType::TOKEN_CLASS, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_ELSE, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_FALSE, {std::bind(&Compiler::literal, this, std::placeholders::_1), std::nullopt, Precedence::PREC_NONE}},
@@ -144,7 +149,7 @@ private:
         {token::TokenType::TOKEN_FUN, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_IF, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_NIL, {std::bind(&Compiler::literal, this, std::placeholders::_1), std::nullopt, Precedence::PREC_NONE}},
-        {token::TokenType::TOKEN_OR, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_OR, {std::nullopt, std::bind(&Compiler::or_infix, this, std::placeholders::_1), Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_PRINT, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_RETURN, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_SUPER, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
@@ -154,7 +159,6 @@ private:
         {token::TokenType::TOKEN_WHILE, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_ERROR, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_EOF, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
-
     };
 };
 } // namespace compiler

@@ -167,6 +167,11 @@ InterpretResult VirtualMachine::run_step() {
         }
         break;
     }
+    case OpCode::OP_LOOP: {
+        u16 offset = read_short();
+        m_ip -= offset;
+        break;
+    }
     case OpCode::OP_RETURN: {
         // Exit virtual machine
         return INTERPRET_OK;

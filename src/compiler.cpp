@@ -226,8 +226,12 @@ bool Compiler::check(token::TokenType token_type) {
 void Compiler::statement() {
     if (match(TokenType::TOKEN_PRINT)) {
         print_statement();
+    } else if (match(TokenType::TOKEN_FOR)) {
+        for_statement();
     } else if (match(TokenType::TOKEN_IF)) {
         if_statement();
+    } else if (match(TokenType::TOKEN_WHILE)) {
+        while_statement();
     } else if (match(TokenType::TOKEN_LEFT_BRACE)) {
         begin_scope();
         block_statement();
@@ -273,6 +277,54 @@ void Compiler::print_statement() {
     emit_byte(OpCode::OP_PRINT);
 }
 
+void Compiler::for_statement() {
+    begin_scope();
+    consume(TokenType::TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+    if (match(TokenType::TOKEN_SEMICOLON)) {
+        // No initializer
+    } else if (match(TokenType::TOKEN_VAR)) {
+        var_declaration();
+    } else {
+        expression_statement();
+    }
+
+    int loop_start = m_chunk->size();
+    int exit_jump = -1;
+    if (!match(TokenType::TOKEN_SEMICOLON)) {
+        expression();
+        consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+    }
+
+    // Jump out of the loop if the condition is false;
+    exit_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
+    emit_byte(OpCode::OP_POP);
+
+    if (!match(TokenType::TOKEN_RIGHT_PAREN)) {
+        // jump to the body of the for loop
+        int body_jump = emit_jump(OpCode::OP_JUMP);
+        int increment_start = m_chunk->size();
+        expression();
+        emit_byte(OpCode::OP_POP);
+        consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+
+        // once we are done with the body, we want to jump to the increment expression section of the code
+        emit_loop(loop_start);
+        // then we set the jump address to the start of the actual for loop
+        loop_start = increment_start;
+        // patch the body jump address as we have compiled the looping logic
+        patch_jump(body_jump);
+    }
+
+    statement();
+    emit_loop(loop_start);
+
+    if (exit_jump != -1) {
+        patch_jump(exit_jump);
+        emit_byte(OpCode::OP_POP);
+    }
+    end_scope();
+}
+
 void Compiler::expression_statement() {
     expression();
     consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after expression.");
@@ -313,6 +365,20 @@ void Compiler::if_statement() {
     patch_jump(else_jump);
 }
 
+void Compiler::while_statement() {
+    int loop_start = m_chunk->size();
+    consume(TokenType::TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+    expression();
+    consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    int exit_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
+    emit_byte(OpCode::OP_POP);
+    statement();
+    emit_loop(loop_start);
+
+    patch_jump(exit_jump);
+    emit_byte(OpCode::OP_POP);
+}
 void Compiler::expression() {
     // Parse lowest precedence as higher precedence operators will
     // take over
@@ -431,6 +497,38 @@ void Compiler::variable(bool can_assign) {
     named_variable(m_parser.m_previous, can_assign);
 }
 
+void Compiler::and_infix(bool can_assign) {
+    // we've parsed the left-hand side of the expression (as this is
+    // an infix op), the result of the left is left on top of stack
+    int end_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
+
+    // remove left value if true
+    emit_byte(OpCode::OP_POP);
+    // parse right hand of expression and leave on top of stack
+    parse_precedence(Precedence::PREC_AND);
+
+    patch_jump(end_jump);
+}
+
+void Compiler::or_infix(bool can_assign) {
+    /*
+     *          left hand operand expression
+     * .------- OP_JUMP_IF_FALSE
+     * |-.----- OP_JUMP
+     * .-|----- OP_POP
+     *   |      right hand operand expression
+     *   .----- continue
+     */
+    int else_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
+    int end_jump = emit_jump(OpCode::OP_JUMP);
+
+    patch_jump(else_jump);
+    emit_byte(OpCode::OP_POP);
+
+    parse_precedence(Precedence::PREC_OR);
+    patch_jump(end_jump);
+}
+
 void Compiler::consume(TokenType token_type, const std::string& message) {
     if (m_parser.m_current.get_type() == token_type) {
         advance();
@@ -484,6 +582,18 @@ void Compiler::emit_constant(Value value) {
 
 void Compiler::emit_return() {
     emit_byte(OpCode::OP_RETURN);
+}
+
+void Compiler::emit_loop(int loop_start) {
+    emit_byte(OpCode::OP_LOOP);
+
+    int offset = m_chunk->size() - loop_start + 2;
+    if (offset > UINT16_MAX) {
+        error("Loop body too large.");
+    }
+
+    emit_byte((offset >> 8) & 0xff);
+    emit_byte(offset & 0xff);
 }
 
 void Compiler::end_compilation() {
