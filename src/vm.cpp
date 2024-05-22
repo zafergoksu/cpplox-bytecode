@@ -6,6 +6,7 @@
 #include "value.h"
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
