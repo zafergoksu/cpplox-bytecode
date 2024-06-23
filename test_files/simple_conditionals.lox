@@ -1,0 +1,10 @@
+var a = 7;
+var b = 6;
+
+if (a < b) {
+    print "less";
+} else if (a > b) {
+    print "greater";
+} else {
+    print "equal";
+}
