@@ -33,6 +33,7 @@ public:
 
 private:
     u8 read_byte();
+    u16 read_short();
     value::Value read_constant();
     void push(value::Value value);
     value::Value pop();

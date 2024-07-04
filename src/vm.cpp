@@ -6,6 +6,7 @@
 #include "value.h"
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -155,6 +156,23 @@ InterpretResult VirtualMachine::run_step() {
         println("");
         break;
     }
+    case OpCode::OP_JUMP: {
+        u16 offset = read_short();
+        m_ip += offset;
+        break;
+    }
+    case OpCode::OP_JUMP_IF_FALSE: {
+        u16 offset = read_short();
+        if (is_falsey(peek_stack_top())) {
+            m_ip += offset;
+        }
+        break;
+    }
+    case OpCode::OP_LOOP: {
+        u16 offset = read_short();
+        m_ip -= offset;
+        break;
+    }
     case OpCode::OP_RETURN: {
         // Exit virtual machine
         return INTERPRET_OK;
@@ -171,6 +189,11 @@ usize VirtualMachine::get_ip() const {
 
 u8 VirtualMachine::read_byte() {
     return m_chunk->get_code().at(m_ip++);
+}
+
+u16 VirtualMachine::read_short() {
+    m_ip += 2;
+    return (m_chunk->get_code().at(m_ip - 2) << 8) | (m_chunk->get_code().at(m_ip - 1));
 }
 
 Value VirtualMachine::read_constant() {

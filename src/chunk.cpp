@@ -13,6 +13,10 @@ void Chunk::write_byte(u8 byte, usize line) {
     m_lines.emplace_back(line);
 }
 
+void Chunk::write_byte_at(usize offset, u8 byte) {
+    m_code[offset] = byte;
+}
+
 const std::vector<u8>& Chunk::get_code() const {
     return m_code;
 }
