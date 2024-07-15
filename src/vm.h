@@ -6,12 +6,15 @@
 
 #include <array>
 #include <memory>
-#include <utility>
-#include <vector>
+
+namespace object {
+class Object;
+} // namespace object
 
 namespace chunk {
 class Chunk;
-}
+} // namespace chunk
+
 namespace vm {
 
 enum InterpretResult {
@@ -28,18 +31,17 @@ public:
     InterpretResult run_step();
     [[nodiscard]] usize get_ip() const;
     void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk);
-    const value::Value& peek_stack_top() const;
-    const value::Value& peek(usize n) const;
+    std::shared_ptr<object::Object> peek_stack_top() const;
+    std::shared_ptr<object::Object> peek(usize n) const;
 
 private:
     u8 read_byte();
     u16 read_short();
-    value::Value read_constant();
-    void push(value::Value value);
-    value::Value pop();
+    std::shared_ptr<object::Object> read_constant();
+    void push(std::shared_ptr<object::Object> value);
+    std::shared_ptr<object::Object> pop();
     void runtime_error(const std::string& message);
 
-    bool is_falsey(value::Value value);
     inline void concatenate();
     inline InterpretResult pop_binary_operands(double& lhs, double& rhs);
     inline InterpretResult binary_add_op();
@@ -54,7 +56,7 @@ private:
     table::Table m_strings;
     table::Table m_globals;
     u8 m_stack_top;
-    std::array<value::Value, UINT8_COUNT> m_stack;
+    std::array<std::shared_ptr<object::Object>, UINT8_COUNT> m_stack;
 };
 
 } // namespace vm
