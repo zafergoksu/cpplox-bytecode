@@ -30,7 +30,7 @@ protected:
     friend bool operator!=(const Object& lhs, const Object& rhs);
 
 public:
-    const ObjectType m_type;
+    const ObjectType type;
 };
 
 bool operator==(const Object& lhs, const Object& rhs);
