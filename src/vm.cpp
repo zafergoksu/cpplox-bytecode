@@ -230,7 +230,7 @@ inline void VirtualMachine::concatenate() {
     auto rhs = pop();
     auto lhs = pop();
     std::string new_string = lhs->to_string() + rhs->to_string();
-    push(std::move(make_obj_string_interned(m_strings, std::move(new_string))));
+    push(make_obj_string_interned(m_strings, std::move(new_string)));
 }
 
 inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, double& out_rhs) {
