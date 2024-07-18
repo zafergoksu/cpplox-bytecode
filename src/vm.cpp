@@ -21,7 +21,17 @@ VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
       m_ip{0},
       m_strings{},
       m_globals{},
-      m_stack_top{0} {}
+      m_stack_top{0},
+      m_stack{} {}
+
+void VirtualMachine::reset() {
+    m_chunk = nullptr;
+    m_ip = 0;
+    m_strings = {};
+    m_globals = {};
+    m_stack_top = 0;
+    m_stack = {};
+}
 
 void VirtualMachine::load_new_chunk(std::shared_ptr<chunk::Chunk> chunk) {
     m_chunk = std::move(chunk);
@@ -107,7 +117,7 @@ InterpretResult VirtualMachine::run_step() {
     case OpCode::OP_EQUAL: {
         std::shared_ptr<Object> rhs = pop();
         std::shared_ptr<Object> lhs = pop();
-        bool result = lhs->is_equal(*lhs);
+        bool result = lhs->is_equal(*rhs);
         push(std::make_shared<BooleanObject>(result));
         break;
     }
@@ -236,6 +246,10 @@ inline void VirtualMachine::concatenate() {
 inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, double& out_rhs) {
     const auto rhs = pop();
     const auto lhs = pop();
+    if (lhs == nullptr || rhs == nullptr) {
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
     if (!(lhs->type == ObjectType::OBJ_NUMBER) || !(rhs->type == ObjectType::OBJ_NUMBER)) {
         runtime_error("Operands must be numbers.");
         return INTERPRET_RUNTIME_ERROR;
@@ -297,7 +311,7 @@ inline InterpretResult VirtualMachine::binary_greater_op() {
     if (result != INTERPRET_OK) {
         return result;
     }
-    push(lhs > rhs);
+    push(std::make_shared<BooleanObject>(lhs > rhs));
     return INTERPRET_OK;
 }
 
@@ -308,7 +322,7 @@ inline InterpretResult VirtualMachine::binary_less_op() {
     if (result != INTERPRET_OK) {
         return result;
     }
-    push(lhs < rhs);
+    push(std::make_shared<BooleanObject>(lhs < rhs));
     return INTERPRET_OK;
 }
 

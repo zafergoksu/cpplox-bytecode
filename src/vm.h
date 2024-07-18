@@ -33,6 +33,7 @@ public:
     void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk);
     std::shared_ptr<object::Object> peek_stack_top() const;
     std::shared_ptr<object::Object> peek(usize n) const;
+    void reset();
 
 private:
     u8 read_byte();

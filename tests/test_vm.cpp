@@ -1,22 +1,29 @@
 #include "chunk.h"
 #include "common.h"
+#include "object.h"
 #include "value.h"
 #include "vm.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <memory>
 #include <variant>
 
 using namespace chunk;
 using namespace value;
+using namespace object;
 
 class VirtualMachineTest : public ::testing::Test {
 protected:
     ~VirtualMachineTest() override = default;
 
+    void TearDown() override {
+        m_vm.reset();
+    }
+
     static std::unique_ptr<Chunk> simple_constant_program() {
         auto chunk = std::make_unique<Chunk>();
 
-        usize constant_idx = chunk->write_constant(1.2);
+        usize constant_idx = chunk->write_constant(std::make_shared<NumberObject>(1.2));
         chunk->write_byte(OpCode::OP_CONSTANT, 123);
         chunk->write_byte(constant_idx, 123);
 
@@ -24,14 +31,14 @@ protected:
         return chunk;
     }
 
-    static std::unique_ptr<Chunk> binary_op_program(Value lhs, Value rhs, OpCode op_code) {
+    static std::unique_ptr<Chunk> binary_op_program(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs, OpCode op_code) {
         auto chunk = std::make_unique<Chunk>();
 
-        usize constant_idx = chunk->write_constant(lhs);
+        usize constant_idx = chunk->write_constant(std::move(lhs));
         chunk->write_byte(OpCode::OP_CONSTANT, 123);
         chunk->write_byte(constant_idx, 123);
 
-        constant_idx = chunk->write_constant(rhs);
+        constant_idx = chunk->write_constant(std::move(rhs));
         chunk->write_byte(OpCode::OP_CONSTANT, 123);
         chunk->write_byte(constant_idx, 123);
 
@@ -52,7 +59,7 @@ protected:
 TEST_F(VirtualMachineTest, test_run_step) {
     auto chunk = std::make_unique<Chunk>();
 
-    usize constant_idx = chunk->write_constant(34.0);
+    usize constant_idx = chunk->write_constant(std::make_shared<NumberObject>(34.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
 
@@ -94,7 +101,7 @@ TEST_F(VirtualMachineTest, test_load_new_chunk) {
 TEST_F(VirtualMachineTest, test_unary_op_negate) {
     auto chunk = std::make_unique<Chunk>();
 
-    usize constant_idx = chunk->write_constant(2.0);
+    usize constant_idx = chunk->write_constant(std::make_shared<NumberObject>(2.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
 
@@ -105,57 +112,62 @@ TEST_F(VirtualMachineTest, test_unary_op_negate) {
     m_vm.run_step();
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), -2.0);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, -2.0);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_binary_op_add) {
-    auto prog = binary_op_program(1.2, 3.4, OpCode::OP_ADD);
+    auto prog = binary_op_program(std::make_shared<NumberObject>(1.2), std::make_shared<NumberObject>(3.4), OpCode::OP_ADD);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.6);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, 4.6);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_binary_op_subtract) {
-    auto prog = binary_op_program(1.2, -3.4, OpCode::OP_SUBTRACT);
+    auto prog = binary_op_program(std::make_shared<NumberObject>(1.2), std::make_shared<NumberObject>(-3.4), OpCode::OP_SUBTRACT);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.6);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, 4.6);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_binary_op_multiply) {
-    auto prog = binary_op_program(1.5, 3.0, OpCode::OP_MULTIPLY);
+    auto prog = binary_op_program(std::make_shared<NumberObject>(1.5), std::make_shared<NumberObject>(3.0), OpCode::OP_MULTIPLY);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 4.5);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, 4.5);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_binary_op_divide) {
-    auto prog = binary_op_program(15.0, 3.0, OpCode::OP_DIVIDE);
+    auto prog = binary_op_program(std::make_shared<NumberObject>(15.0), std::make_shared<NumberObject>(3.0), OpCode::OP_DIVIDE);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 5.0);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, 5.0);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_binary_op_failure) {
-    auto prog = binary_op_program(nullptr, 3.0, OpCode::OP_DIVIDE);
+    auto prog = binary_op_program(nullptr, std::make_shared<NumberObject>(3.0), OpCode::OP_DIVIDE);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
@@ -187,7 +199,8 @@ TEST_F(VirtualMachineTest, test_true_bool_op) {
 
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), true);
+    auto stack_top = std::static_pointer_cast<BooleanObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, true);
 }
 
 TEST_F(VirtualMachineTest, test_false_bool_op) {
@@ -199,7 +212,8 @@ TEST_F(VirtualMachineTest, test_false_bool_op) {
 
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), false);
+    auto stack_top = std::static_pointer_cast<BooleanObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, false);
 }
 
 TEST_F(VirtualMachineTest, test_not_op) {
@@ -214,73 +228,81 @@ TEST_F(VirtualMachineTest, test_not_op) {
     m_vm.run_step();
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), true);
+    auto stack_top = std::static_pointer_cast<BooleanObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, true);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_equal_op) {
-    auto prog = binary_op_program(15.0, 15.0, OpCode::OP_EQUAL);
+    auto prog = binary_op_program(std::make_shared<NumberObject>(15.0), std::make_shared<NumberObject>(15.0), OpCode::OP_EQUAL);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), true);
+    auto stack_top = std::static_pointer_cast<BooleanObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, true);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 
-    prog = binary_op_program(15.0, 3.0, OpCode::OP_EQUAL);
+    prog = binary_op_program(std::make_shared<NumberObject>(15.0), std::make_shared<NumberObject>(3.0), OpCode::OP_EQUAL);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), false);
+    stack_top = std::static_pointer_cast<BooleanObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, false);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_binary_comparison_op) {
-    auto prog = binary_op_program(15.0, 13.0, OpCode::OP_GREATER);
+    auto prog = binary_op_program(std::make_shared<NumberObject>(15.0), std::make_shared<NumberObject>(13.0), OpCode::OP_GREATER);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), true);
+    auto stack_top = std::static_pointer_cast<BooleanObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, true);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 
-    prog = binary_op_program(15.0, 3.0, OpCode::OP_LESS);
+    prog = binary_op_program(std::make_shared<NumberObject>(15.0), std::make_shared<NumberObject>(3.0), OpCode::OP_LESS);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<bool>(m_vm.peek_stack_top()), false);
+    stack_top = std::static_pointer_cast<BooleanObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, false);
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_string_concatenation) {
-    ObjString string_1 = make_obj_string("Hello, ");
-    ObjString string_2 = make_obj_string("world!");
+    auto string_1 = std::make_shared<StringObject>("Hello, ");
+    auto string_2 = std::make_shared<StringObject>("world!");
     auto prog = binary_op_program(string_1, string_2, OpCode::OP_ADD);
     m_vm.load_new_chunk(std::move(prog));
     run_n_steps(2);
     auto result = m_vm.run_step();
 
-    EXPECT_EQ(std::get<ObjString>(m_vm.peek_stack_top()).str, "Hello, world!");
+    auto stack_top = std::static_pointer_cast<StringObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, "Hello, world!");
     result = m_vm.run_step();
     EXPECT_EQ(result, vm::InterpretResult::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_get_global_var) {
-    ObjString string_1 = make_obj_string("a");
+    auto string_1 = std::make_shared<StringObject>("a");
+
     auto chunk = std::make_unique<Chunk>();
 
-    usize constant_idx = chunk->write_constant(1.0);
+    // testing var a = 1 + 2;
+    usize constant_idx = chunk->write_constant(std::make_shared<NumberObject>(1.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
 
-    constant_idx = chunk->write_constant(2.0);
+    constant_idx = chunk->write_constant(std::make_shared<NumberObject>(2.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
 
@@ -295,20 +317,21 @@ TEST_F(VirtualMachineTest, test_get_global_var) {
     m_vm.load_new_chunk(std::move(chunk));
     run_n_steps(5);
 
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 3.0);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, 3.0);
     auto result = m_vm.run_step();
     EXPECT_EQ(result, vm::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_set_global_var) {
-    ObjString string_1 = make_obj_string("a");
+    auto string_1 = std::make_shared<StringObject>("a");
     auto chunk = std::make_unique<Chunk>();
 
-    usize constant_idx = chunk->write_constant(1.0);
+    usize constant_idx = chunk->write_constant(std::make_shared<NumberObject>(1.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
 
-    constant_idx = chunk->write_constant(2.0);
+    constant_idx = chunk->write_constant(std::make_shared<NumberObject>(2.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
 
@@ -323,7 +346,8 @@ TEST_F(VirtualMachineTest, test_set_global_var) {
     m_vm.load_new_chunk(std::move(chunk));
     run_n_steps(5);
 
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 3.0);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, 3.0);
     auto result = m_vm.run_step();
     EXPECT_EQ(result, vm::INTERPRET_OK);
 }
@@ -331,7 +355,7 @@ TEST_F(VirtualMachineTest, test_set_global_var) {
 TEST_F(VirtualMachineTest, test_get_local_var) {
     auto chunk = std::make_unique<Chunk>();
 
-    usize constant_idx = chunk->write_constant(10.0);
+    usize constant_idx = chunk->write_constant(std::make_shared<NumberObject>(10.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
     chunk->write_byte(OpCode::OP_GET_LOCAL, 123);
@@ -341,17 +365,18 @@ TEST_F(VirtualMachineTest, test_get_local_var) {
     m_vm.load_new_chunk(std::move(chunk));
     run_n_steps(2);
     auto result = m_vm.run_step();
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 10.0);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, 10.0);
     EXPECT_EQ(result, vm::INTERPRET_OK);
 }
 
 TEST_F(VirtualMachineTest, test_set_local_var) {
     auto chunk = std::make_unique<Chunk>();
 
-    usize constant_idx = chunk->write_constant(10.0);
+    usize constant_idx = chunk->write_constant(std::make_shared<NumberObject>(10.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
-    constant_idx = chunk->write_constant(20.0);
+    constant_idx = chunk->write_constant(std::make_shared<NumberObject>(20.0));
     chunk->write_byte(OpCode::OP_CONSTANT, 123);
     chunk->write_byte(constant_idx, 123);
     chunk->write_byte(OpCode::OP_SET_LOCAL, 123);
@@ -363,7 +388,8 @@ TEST_F(VirtualMachineTest, test_set_local_var) {
     m_vm.load_new_chunk(std::move(chunk));
     run_n_steps(4);
     auto result = m_vm.run_step();
-    EXPECT_EQ(std::get<double>(m_vm.peek_stack_top()), 20.0);
+    auto stack_top = std::static_pointer_cast<NumberObject>(m_vm.peek_stack_top());
+    EXPECT_EQ(stack_top->value, 20.0);
     EXPECT_EQ(result, vm::INTERPRET_OK);
 }
 

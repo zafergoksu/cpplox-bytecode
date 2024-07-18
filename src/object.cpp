@@ -40,6 +40,9 @@ bool operator!=(const Object& lhs, const Object& rhs) {
     return lhs.type != rhs.type && !lhs.is_equal(rhs);
 }
 
+NullObject::NullObject()
+    : Object{ObjectType::OBJ_NULL} {}
+
 std::string NullObject::to_string() const {
     return "nil";
 }
@@ -56,7 +59,7 @@ bool NullObject::is_equal(const Object& other) const {
     return other.type == ObjectType::OBJ_NULL;
 }
 
-NumberObject::NumberObject(double v) : value(v) {}
+NumberObject::NumberObject(double v) : Object{ObjectType::OBJ_NUMBER}, value{v} {}
 
 std::string NumberObject::to_string() const {
     return std::to_string(value);
@@ -78,7 +81,7 @@ bool NumberObject::is_equal(const Object& other) const {
     return false;
 }
 
-BooleanObject::BooleanObject(bool v) : value(v) {}
+BooleanObject::BooleanObject(bool v) : Object{ObjectType::OBJ_BOOLEAN}, value(v) {}
 
 std::string BooleanObject::to_string() const {
     return value ? "true" : "false";
@@ -100,7 +103,7 @@ bool BooleanObject::is_equal(const Object& other) const {
     return false;
 }
 
-StringObject::StringObject(const std::string& v) : value(v), hash(hash_string(v)) {}
+StringObject::StringObject(const std::string& v) : Object{ObjectType::OBJ_STRING}, value(v), hash(hash_string(v)) {}
 
 std::string StringObject::to_string() const {
     return value;

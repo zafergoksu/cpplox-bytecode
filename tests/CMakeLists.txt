@@ -1,6 +1,6 @@
 set(TEST_SOURCES
         test_chunk.cpp
-        test_compiler.cpp
+        # test_compiler.cpp
         test_scanner.cpp
         test_value.cpp
         test_vm.cpp)

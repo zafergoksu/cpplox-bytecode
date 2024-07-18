@@ -19,7 +19,7 @@ bool Table::set(std::shared_ptr<StringObject> key, std::shared_ptr<Object> value
     return is_new_key;
 }
 
-bool Table::get(std::shared_ptr<StringObject> key, std::shared_ptr<Object> value) {
+bool Table::get(std::shared_ptr<StringObject> key, std::shared_ptr<Object>& value) {
     if (m_entries.size() == 0) {
         return false;
     }
@@ -69,7 +69,7 @@ Entry* Table::find_entry(std::shared_ptr<StringObject> key) {
     while (true) {
         Entry* entry = &m_entries[index];
         if (!entry->key) {
-            if (entry->value->type == ObjectType::OBJ_NULL) {
+            if (entry->value == nullptr || entry->value->type == ObjectType::OBJ_NULL) {
                 // This entry is truely empty
                 // return a tombstone slot if we encountered one earlier
                 return tombstone != nullptr ? tombstone : entry;
@@ -99,7 +99,7 @@ std::shared_ptr<StringObject> Table::find_string(const std::string& value, u32 h
         Entry& entry = m_entries[index];
         if (!entry.key) {
             // Stop if we find an empty non-tombstone entry.
-            if (entry.value->type == ObjectType::OBJ_NULL) {
+            if (entry.value == nullptr || entry.value->type == ObjectType::OBJ_NULL) {
                 return nullptr;
             }
         } else if (entry.key->value.length() && entry.key->hash == hash && entry.key->value == value) {
