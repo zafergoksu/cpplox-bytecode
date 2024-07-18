@@ -1,25 +1,25 @@
 #include "table.h"
 #include "common.h"
+#include "object.h"
 #include "value.h"
-#include <cstddef>
-#include <optional>
+#include <memory>
 #include <string>
-#include <variant>
 
 using namespace value;
+using namespace object;
 
 namespace table {
 Table::Table() : m_entries{k_initial_capacity} {}
 
-bool Table::set(ObjString& key, Value value) {
+bool Table::set(std::shared_ptr<StringObject> key, std::shared_ptr<Object> value) {
     Entry* entry = find_entry(key);
-    bool is_new_key = entry->key == std::nullopt;
+    bool is_new_key = entry->key == nullptr;
     entry->key = key;
     entry->value = value;
     return is_new_key;
 }
 
-bool Table::get(ObjString& key, Value& value) {
+bool Table::get(std::shared_ptr<StringObject> key, std::shared_ptr<Object>& value) {
     if (m_entries.size() == 0) {
         return false;
     }
@@ -33,7 +33,7 @@ bool Table::get(ObjString& key, Value& value) {
     return true;
 }
 
-bool Table::del(ObjString& key) {
+bool Table::del(std::shared_ptr<StringObject> key) {
     if (m_entries.size() == 0) {
         return false;
     }
@@ -48,28 +48,28 @@ bool Table::del(ObjString& key) {
     // of the chain and would orphan the succeeding colliding values, therefore,
     // a tombstone allows us to continue linear probing until we find the latest collided value
 
-    entry->key = std::nullopt;
-    entry->value = true;
+    entry->key = nullptr;
+    entry->value = std::make_shared<BooleanObject>(true);
     return true;
 }
 
 void Table::add_all(Table& to) {
     for (u32 i = 0; i < m_entries.capacity(); i++) {
         Entry& entry = m_entries[i];
-        if (entry.key) {
-            to.set(entry.key.value(), entry.value);
+        if (entry.key != nullptr) {
+            to.set(entry.key, entry.value);
         }
     }
 }
 
-Entry* Table::find_entry(ObjString& key) {
+Entry* Table::find_entry(std::shared_ptr<StringObject> key) {
     auto capacity = m_entries.capacity();
-    u32 index = key.hash % capacity;
+    u32 index = key->hash % capacity;
     Entry* tombstone = nullptr;
     while (true) {
         Entry* entry = &m_entries[index];
-        if (!entry->key) {
-            if (std::holds_alternative<std::nullptr_t>(entry->value)) {
+        if (entry->key == nullptr) {
+            if (entry->value == nullptr || entry->value->type == ObjectType::OBJ_NULL) {
                 // This entry is truely empty
                 // return a tombstone slot if we encountered one earlier
                 return tombstone != nullptr ? tombstone : entry;
@@ -79,7 +79,7 @@ Entry* Table::find_entry(ObjString& key) {
                     tombstone = entry;
                 }
             }
-        } else if (entry->key == key) {
+        } else if (entry->key->is_equal(*key)) {
             // We found our key
             return entry;
         }
@@ -88,21 +88,21 @@ Entry* Table::find_entry(ObjString& key) {
     }
 }
 
-std::optional<ObjString> Table::find_string(const std::string& value, u32 hash) {
+std::shared_ptr<StringObject> Table::find_string(const std::string& value, u32 hash) {
     if (m_entries.size() == 0) {
-        return std::nullopt;
+        return nullptr;
     }
 
     u32 index = hash % m_entries.capacity();
 
     while (true) {
         Entry& entry = m_entries[index];
-        if (!entry.key) {
+        if (entry.key == nullptr) {
             // Stop if we find an empty non-tombstone entry.
-            if (std::holds_alternative<std::nullptr_t>(entry.value)) {
-                return std::nullopt;
+            if (entry.value == nullptr || entry.value->type == ObjectType::OBJ_NULL) {
+                return nullptr;
             }
-        } else if (entry.key->str.length() && entry.key->hash == hash && entry.key->str == value) {
+        } else if (entry.key->value.length() && entry.key->hash == hash && entry.key->value == value) {
             return entry.key;
         }
 

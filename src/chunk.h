@@ -4,6 +4,10 @@
 #include "value.h"
 #include <vector>
 
+namespace object {
+class Object;
+} // namespace object
+
 namespace chunk {
 enum OpCode : u8 {
     OP_CONSTANT,
@@ -41,7 +45,7 @@ public:
     [[nodiscard]] usize size() const;
     void write_byte(u8 byte, usize line);
     void write_byte_at(usize offset, u8 byte);
-    [[nodiscard]] usize write_constant(value::Value value);
+    [[nodiscard]] usize write_constant(std::shared_ptr<object::Object> value);
 
     [[nodiscard]] const std::vector<u8>& get_code() const;
     [[nodiscard]] const std::vector<usize>& get_lines() const;

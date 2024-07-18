@@ -1,11 +1,10 @@
 #include "debug.h"
 #include "chunk.h"
 #include "common.h"
+#include "object.h"
 #include "utility.h"
 #include "value.h"
-#include <cstddef>
 #include <string>
-#include <variant>
 
 using namespace chunk;
 
@@ -19,8 +18,8 @@ usize constant_instruction(const std::string& name, const Chunk& chunk, usize of
     u8 constant = chunk.get_code().at(offset + 1);
     print("{:16s} {:4d} '", name, constant);
 
-    auto value = chunk.get_constants().get_values().at(constant);
-    std::visit(value::print_visitor{}, value);
+    std::shared_ptr<object::Object> value = chunk.get_constants().get_values().at(constant);
+    print("{}", value->to_string());
     println("'");
 
     return offset + 2;

@@ -2,17 +2,17 @@
 #include "chunk.h"
 #include "common.h"
 #include "debug.h"
+#include "object.h"
 #include "utility.h"
 #include "value.h"
-#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 using namespace chunk;
 using namespace value;
+using namespace object;
 
 namespace vm {
 
@@ -21,7 +21,17 @@ VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
       m_ip{0},
       m_strings{},
       m_globals{},
-      m_stack_top{0} {}
+      m_stack_top{0},
+      m_stack{} {}
+
+void VirtualMachine::reset() {
+    m_chunk = nullptr;
+    m_ip = 0;
+    m_strings = {};
+    m_globals = {};
+    m_stack_top = 0;
+    m_stack = {};
+}
 
 void VirtualMachine::load_new_chunk(std::shared_ptr<chunk::Chunk> chunk) {
     m_chunk = std::move(chunk);
@@ -33,7 +43,7 @@ InterpretResult VirtualMachine::run() {
     while (m_ip < m_chunk->size()) {
 #ifdef DEBUG_TRACE_EXECUTION
         for (u8 i = 0; i < m_stack_top; i++) {
-            println("\t[ {} ]", value_to_string(m_stack[i]));
+            println("\t[ {} ]", m_stack[i]->to_string());
         }
         disassemble_instruction(*m_chunk, m_ip);
 #endif
@@ -49,18 +59,18 @@ InterpretResult VirtualMachine::run_step() {
     u8 instruction = read_byte();
     switch (instruction) {
     case OpCode::OP_CONSTANT: {
-        Value constant = read_constant();
+        std::shared_ptr<Object> constant = read_constant();
         push(constant);
         break;
     }
     case OpCode::OP_NIL:
-        push(nullptr);
+        push(std::make_shared<NullObject>());
         break;
     case OpCode::OP_TRUE:
-        push(true);
+        push(std::make_shared<BooleanObject>(true));
         break;
     case OpCode::OP_FALSE:
-        push(false);
+        push(std::make_shared<BooleanObject>(false));
         break;
     case OpCode::OP_POP:
         pop();
@@ -78,37 +88,37 @@ InterpretResult VirtualMachine::run_step() {
         break;
     }
     case OpCode::OP_GET_GLOBAL: {
-        ObjString name = std::get<ObjString>(read_constant());
-        Value value;
+        std::shared_ptr<StringObject> name = std::static_pointer_cast<StringObject>(read_constant());
+        std::shared_ptr<Object> value;
         if (!m_globals.get(name, value)) {
-            runtime_error("Undefined variable '" + name.str + "'.");
+            runtime_error("Undefined variable '" + name->to_string() + "'.");
             return INTERPRET_RUNTIME_ERROR;
         }
         push(value);
         break;
     }
     case OpCode::OP_DEFINE_GLOBAL: {
-        ObjString name = std::get<ObjString>(read_constant());
+        std::shared_ptr<StringObject> name = std::static_pointer_cast<StringObject>(read_constant());
         m_globals.set(name, peek_stack_top());
         pop();
         break;
     }
     case OpCode::OP_SET_GLOBAL: {
-        ObjString name = std::get<ObjString>(read_constant());
+        std::shared_ptr<StringObject> name = std::static_pointer_cast<StringObject>(read_constant());
         // when we set, we haven't defined it before
         if (m_globals.set(name, peek_stack_top())) {
             // delete old value for continuous use in repl
             m_globals.del(name);
-            runtime_error("Undefined variable '" + name.str + "'.");
+            runtime_error("Undefined variable '" + name->to_string() + "'.");
             return INTERPRET_RUNTIME_ERROR;
         }
         break;
     }
     case OpCode::OP_EQUAL: {
-        Value rhs = pop();
-        Value lhs = pop();
-        const auto result = lhs == rhs;
-        push(result);
+        std::shared_ptr<Object> rhs = pop();
+        std::shared_ptr<Object> lhs = pop();
+        bool result = lhs->is_equal(*rhs);
+        push(std::make_shared<BooleanObject>(result));
         break;
     }
     case OpCode::OP_GREATER:
@@ -118,11 +128,15 @@ InterpretResult VirtualMachine::run_step() {
         binary_less_op();
         break;
     case OpCode::OP_ADD: {
-        const Value& stack_top = peek_stack_top();
-        const Value& stack_top_prev = peek(1);
-        if (std::holds_alternative<ObjString>(stack_top) && std::holds_alternative<ObjString>(stack_top_prev)) {
+        std::shared_ptr<Object> stack_top = peek_stack_top();
+        std::shared_ptr<Object> stack_top_prev = peek(1);
+        if (stack_top == nullptr || stack_top_prev == nullptr) {
+            runtime_error("Operands are nil.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        if (stack_top->type == ObjectType::OBJ_STRING && stack_top_prev->type == ObjectType::OBJ_STRING) {
             concatenate();
-        } else if (std::holds_alternative<double>(stack_top) && std::holds_alternative<double>(stack_top_prev)) {
+        } else if (stack_top->type == ObjectType::OBJ_NUMBER && stack_top_prev->type == ObjectType::OBJ_NUMBER) {
             binary_add_op();
         } else {
             runtime_error("Operands must be two numbers or two strings.");
@@ -140,19 +154,22 @@ InterpretResult VirtualMachine::run_step() {
         binary_divide_op();
         break;
     case OpCode::OP_NOT:
-        push(is_falsey(pop()));
+        push(std::make_shared<BooleanObject>(pop()->is_falsey()));
         break;
     case OpCode::OP_NEGATE: {
-        if (!std::holds_alternative<double>(peek_stack_top())) {
+        std::shared_ptr<Object> stack_top = peek_stack_top();
+        if (stack_top != nullptr && stack_top->type != ObjectType::OBJ_NUMBER) {
             runtime_error("Operand must be a number.");
             return INTERPRET_RUNTIME_ERROR;
         }
-        const auto negated_value = -std::get<double>(pop());
+        auto value = std::static_pointer_cast<NumberObject>(pop());
+        auto negated_value = std::make_shared<NumberObject>(-value->value);
         push(negated_value);
         break;
     }
     case OpCode::OP_PRINT: {
-        std::visit(print_visitor{}, pop());
+        std::shared_ptr<StringObject> value = std::static_pointer_cast<StringObject>(pop());
+        println("{}", value->to_string());
         println("");
         break;
     }
@@ -163,7 +180,7 @@ InterpretResult VirtualMachine::run_step() {
     }
     case OpCode::OP_JUMP_IF_FALSE: {
         u16 offset = read_short();
-        if (is_falsey(peek_stack_top())) {
+        if (peek_stack_top()->is_falsey()) {
             m_ip += offset;
         }
         break;
@@ -196,24 +213,24 @@ u16 VirtualMachine::read_short() {
     return (m_chunk->get_code().at(m_ip - 2) << 8) | (m_chunk->get_code().at(m_ip - 1));
 }
 
-Value VirtualMachine::read_constant() {
+std::shared_ptr<Object> VirtualMachine::read_constant() {
     return m_chunk->get_constants().get_values().at(read_byte());
 }
 
-void VirtualMachine::push(Value value) {
+void VirtualMachine::push(std::shared_ptr<Object> value) {
     m_stack[m_stack_top] = std::move(value);
     m_stack_top++;
 }
 
-const Value& VirtualMachine::peek_stack_top() const {
+std::shared_ptr<Object> VirtualMachine::peek_stack_top() const {
     return peek(0);
 }
 
-const Value& VirtualMachine::peek(usize n) const {
+std::shared_ptr<Object> VirtualMachine::peek(usize n) const {
     return m_stack[m_stack_top - 1 - n];
 }
 
-Value VirtualMachine::pop() {
+std::shared_ptr<Object> VirtualMachine::pop() {
     m_stack_top--;
     return m_stack[m_stack_top];
 }
@@ -224,35 +241,27 @@ void VirtualMachine::runtime_error(const std::string& message) {
     println_err("[line {}] in script", line);
 }
 
-bool VirtualMachine::is_falsey(Value value) {
-    if (std::holds_alternative<std::nullptr_t>(value)) {
-        return true;
-    }
-
-    if (std::holds_alternative<bool>(value)) {
-        return !std::get<bool>(value);
-    }
-
-    return false;
-}
-
 inline void VirtualMachine::concatenate() {
-    ObjString rhs = std::get<ObjString>(pop());
-    ObjString lhs = std::get<ObjString>(pop());
-    std::string new_string = lhs.str + rhs.str;
-    push(std::move(make_obj_string_interned(m_strings, std::move(new_string))));
+    auto rhs = pop();
+    auto lhs = pop();
+    std::string new_string = lhs->to_string() + rhs->to_string();
+    push(make_obj_string_interned(m_strings, std::move(new_string)));
 }
 
 inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, double& out_rhs) {
     const auto rhs = pop();
     const auto lhs = pop();
-    if (!std::holds_alternative<double>(lhs) || !std::holds_alternative<double>(rhs)) {
+    if (lhs == nullptr || rhs == nullptr) {
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
+    if (!(lhs->type == ObjectType::OBJ_NUMBER) || !(rhs->type == ObjectType::OBJ_NUMBER)) {
         runtime_error("Operands must be numbers.");
         return INTERPRET_RUNTIME_ERROR;
     }
 
-    out_lhs = std::get<double>(lhs);
-    out_rhs = std::get<double>(rhs);
+    out_lhs = std::static_pointer_cast<NumberObject>(lhs)->value;
+    out_rhs = std::static_pointer_cast<NumberObject>(rhs)->value;
     return INTERPRET_OK;
 }
 
@@ -263,7 +272,7 @@ inline InterpretResult VirtualMachine::binary_add_op() {
     if (result != INTERPRET_OK) {
         return result;
     }
-    push(lhs + rhs);
+    push(std::make_shared<NumberObject>(lhs + rhs));
     return INTERPRET_OK;
 }
 
@@ -274,7 +283,7 @@ inline InterpretResult VirtualMachine::binary_subtract_op() {
     if (result != INTERPRET_OK) {
         return result;
     }
-    push(lhs - rhs);
+    push(std::make_shared<NumberObject>(lhs - rhs));
     return INTERPRET_OK;
 }
 
@@ -285,7 +294,7 @@ inline InterpretResult VirtualMachine::binary_multiply_op() {
     if (result != INTERPRET_OK) {
         return result;
     }
-    push(lhs * rhs);
+    push(std::make_shared<NumberObject>(lhs * rhs));
     return INTERPRET_OK;
 }
 
@@ -296,7 +305,7 @@ inline InterpretResult VirtualMachine::binary_divide_op() {
     if (result != INTERPRET_OK) {
         return result;
     }
-    push(lhs / rhs);
+    push(std::make_shared<NumberObject>(lhs / rhs));
     return INTERPRET_OK;
 }
 
@@ -307,7 +316,7 @@ inline InterpretResult VirtualMachine::binary_greater_op() {
     if (result != INTERPRET_OK) {
         return result;
     }
-    push(lhs > rhs);
+    push(std::make_shared<BooleanObject>(lhs > rhs));
     return INTERPRET_OK;
 }
 
@@ -318,7 +327,7 @@ inline InterpretResult VirtualMachine::binary_less_op() {
     if (result != INTERPRET_OK) {
         return result;
     }
-    push(lhs < rhs);
+    push(std::make_shared<BooleanObject>(lhs < rhs));
     return INTERPRET_OK;
 }
 

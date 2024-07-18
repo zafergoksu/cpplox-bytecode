@@ -1,7 +1,11 @@
 #include "chunk.h"
 #include "common.h"
+#include "object.h"
 #include "value.h"
+#include <memory>
 #include <vector>
+
+using namespace object;
 
 namespace chunk {
 usize Chunk::size() const {
@@ -21,7 +25,7 @@ const std::vector<u8>& Chunk::get_code() const {
     return m_code;
 }
 
-usize Chunk::write_constant(value::Value value) {
+usize Chunk::write_constant(std::shared_ptr<Object> value) {
     m_constants.write_value(value);
     return m_constants.get_values().size() - 1;
 }

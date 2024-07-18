@@ -2,6 +2,7 @@
 #include "chunk.h"
 #include "common.h"
 #include "debug.h"
+#include "object.h"
 #include "scanner.h"
 #include "token.h"
 #include "utility.h"
@@ -94,7 +95,7 @@ void Compiler::mark_initialized() {
 }
 
 u8 Compiler::identifier_constant(const token::Token& token) {
-    ObjString obj_string = make_obj_string(token.get_lexeme());
+    auto obj_string = std::make_shared<object::StringObject>(token.get_lexeme());
     return make_constant(std::move(obj_string));
 }
 
@@ -467,8 +468,8 @@ void Compiler::advance() {
 }
 
 void Compiler::number(bool can_assign) {
-    Value value = std::stod(m_parser.m_previous.get_lexeme());
-    emit_constant(value);
+    auto value = std::make_shared<object::NumberObject>(std::stod(m_parser.m_previous.get_lexeme()));
+    emit_constant(std::move(value));
 }
 
 void Compiler::literal(bool can_assign) {
@@ -490,7 +491,7 @@ void Compiler::literal(bool can_assign) {
 
 void Compiler::string(bool can_assign) {
     std::string str = m_parser.m_previous.get_lexeme().substr(1, m_parser.m_previous.get_lexeme().length() - 2);
-    emit_constant(std::move(make_obj_string(std::move(str))));
+    emit_constant(std::make_shared<object::StringObject>(std::move(str)));
 }
 
 void Compiler::variable(bool can_assign) {
@@ -576,8 +577,8 @@ void Compiler::emit_bytes(u8 byte_1, u8 byte_2) {
     emit_byte(byte_2);
 }
 
-void Compiler::emit_constant(Value value) {
-    emit_bytes(OpCode::OP_CONSTANT, make_constant(value));
+void Compiler::emit_constant(std::shared_ptr<object::Object> value) {
+    emit_bytes(OpCode::OP_CONSTANT, make_constant(std::move(value)));
 }
 
 void Compiler::emit_return() {
@@ -606,8 +607,8 @@ void Compiler::end_compilation() {
 #endif
 }
 
-u8 Compiler::make_constant(Value value) {
-    usize constant_idx = m_chunk->write_constant(value);
+u8 Compiler::make_constant(std::shared_ptr<object::Object> value) {
+    usize constant_idx = m_chunk->write_constant(std::move(value));
     if (constant_idx > UINT8_MAX) {
         error("Too many constants in one chunk.");
         return 0;

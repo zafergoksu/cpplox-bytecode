@@ -2,6 +2,7 @@
 
 #include "chunk.h"
 #include "common.h"
+#include "object.h"
 #include "scanner.h"
 #include "token.h"
 #include "value.h"
@@ -101,11 +102,11 @@ private:
 
     void emit_byte(u8 byte);
     void emit_bytes(u8 byte_1, u8 byte_2);
-    void emit_constant(value::Value value);
+    void emit_constant(std::shared_ptr<object::Object> value);
     void emit_return();
     void end_compilation();
     void emit_loop(int loop_start);
-    u8 make_constant(value::Value value);
+    u8 make_constant(std::shared_ptr<object::Object> value);
 
     void error_at_current(const std::string& message);
     void error(const std::string& message);

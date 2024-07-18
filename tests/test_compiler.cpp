@@ -5,10 +5,10 @@
 #include "value.h"
 #include "gtest/gtest.h"
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <ios>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -32,10 +32,14 @@ protected:
         return m_scanner != nullptr && m_current_chunk != nullptr;
     }
 
-    std::string read_file_to_string(std::string filename) {
+    std::string read_file_to_string(const std::string& filename) {
+        std::string alternative_path = "./test_files/" + filename;
         m_test_file_stream.open(filename);
         if (!m_test_file_stream.is_open()) {
-            throw std::runtime_error{"Could not open file: '" + filename + "'"};
+            m_test_file_stream.open(alternative_path);
+            if (!m_test_file_stream.is_open()) {
+                throw std::runtime_error{"Could not open file: '" + filename + "'. Current dir: " + std::filesystem::current_path().string()};
+            }
         }
 
         std::stringstream buffer;
