@@ -68,7 +68,7 @@ Entry* Table::find_entry(std::shared_ptr<StringObject> key) {
     Entry* tombstone = nullptr;
     while (true) {
         Entry* entry = &m_entries[index];
-        if (!entry->key) {
+        if (entry->key == nullptr) {
             if (entry->value == nullptr || entry->value->type == ObjectType::OBJ_NULL) {
                 // This entry is truely empty
                 // return a tombstone slot if we encountered one earlier
@@ -97,7 +97,7 @@ std::shared_ptr<StringObject> Table::find_string(const std::string& value, u32 h
 
     while (true) {
         Entry& entry = m_entries[index];
-        if (!entry.key) {
+        if (entry.key == nullptr) {
             // Stop if we find an empty non-tombstone entry.
             if (entry.value == nullptr || entry.value->type == ObjectType::OBJ_NULL) {
                 return nullptr;

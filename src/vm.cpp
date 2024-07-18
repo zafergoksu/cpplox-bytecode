@@ -130,6 +130,10 @@ InterpretResult VirtualMachine::run_step() {
     case OpCode::OP_ADD: {
         std::shared_ptr<Object> stack_top = peek_stack_top();
         std::shared_ptr<Object> stack_top_prev = peek(1);
+        if (stack_top == nullptr || stack_top_prev == nullptr) {
+            runtime_error("Operands are nil.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
         if (stack_top->type == ObjectType::OBJ_STRING && stack_top_prev->type == ObjectType::OBJ_STRING) {
             concatenate();
         } else if (stack_top->type == ObjectType::OBJ_NUMBER && stack_top_prev->type == ObjectType::OBJ_NUMBER) {
@@ -153,7 +157,8 @@ InterpretResult VirtualMachine::run_step() {
         push(std::make_shared<BooleanObject>(pop()->is_falsey()));
         break;
     case OpCode::OP_NEGATE: {
-        if (!(peek_stack_top()->type == ObjectType::OBJ_NUMBER)) {
+        std::shared_ptr<Object> stack_top = peek_stack_top();
+        if (stack_top != nullptr && stack_top->type != ObjectType::OBJ_NUMBER) {
             runtime_error("Operand must be a number.");
             return INTERPRET_RUNTIME_ERROR;
         }
