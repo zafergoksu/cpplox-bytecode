@@ -25,7 +25,7 @@ enum InterpretResult {
 
 class VirtualMachine {
 public:
-    VirtualMachine() = default;
+    VirtualMachine();
     explicit VirtualMachine(std::unique_ptr<chunk::Chunk> chunk);
     InterpretResult run();
     InterpretResult run_step();

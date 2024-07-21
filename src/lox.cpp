@@ -13,19 +13,20 @@
 using namespace compiler;
 using namespace scanner;
 using namespace chunk;
+using namespace object;
 
 namespace lox {
 
 vm::InterpretResult interpret(std::string source, vm::VirtualMachine& vm) {
     auto scanner = std::make_shared<Scanner>(std::move(source));
-    auto chunk = std::make_shared<Chunk>();
-    Compiler compiler{scanner, chunk};
+    Compiler compiler{scanner, object::FunctionType::TYPE_SCRIPT};
 
-    if (!compiler.compile()) {
+    std::shared_ptr<FunctionObject> function = compiler.compile();
+    if (function == nullptr) {
         return vm::InterpretResult::INTERPRET_COMPILE_ERROR;
     }
 
-    vm.load_new_chunk(chunk);
+    vm.load_new_chunk(function->chunk);
     return vm.run();
 }
 

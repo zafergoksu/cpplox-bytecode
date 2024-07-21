@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <object.h>
 #include <optional>
 #include <string>
 #include <utility>
@@ -18,6 +19,7 @@ using namespace token;
 using namespace chunk;
 using namespace scanner;
 using namespace value;
+using namespace object;
 
 namespace compiler {
 
@@ -25,7 +27,7 @@ Local::Local()
     : m_name{TokenType::TOKEN_EOF, "", 0},
       m_depth{std::nullopt} {}
 
-Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Chunk> chunk)
+Compiler::Compiler(std::shared_ptr<Scanner> scanner, FunctionType type)
     : m_scanner{std::move(scanner)},
       m_parser{Token{TokenType::TOKEN_EOF, "", 1},
                Token{TokenType::TOKEN_EOF, "", 1},
@@ -33,21 +35,27 @@ Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Chunk> chun
                false},
       m_local_count{0},
       m_scope_depth{0},
-      m_chunk{std::move(chunk)} {}
+      m_function{std::make_shared<FunctionObject>(0, type, std::make_shared<chunk::Chunk>(), nullptr)} {
+    m_locals[0].m_depth = 0;
+}
 
-bool Compiler::compile() {
+std::shared_ptr<FunctionObject> Compiler::compile() {
     advance();
 
     while (!match(TokenType::TOKEN_EOF)) {
         declaration();
     }
 
-    end_compilation();
-    return !m_parser.m_had_error;
+    auto function = end_compilation();
+    return m_parser.m_had_error ? nullptr : function;
 }
 
 const ParseRule& Compiler::get_rule(token::TokenType token_type) {
     return m_rules[token_type];
+}
+
+const Chunk& Compiler::current_chunk() const {
+    return *m_function->chunk;
 }
 
 void Compiler::synchronize() {
@@ -194,21 +202,21 @@ int Compiler::emit_jump(u8 instruction) {
     emit_byte(instruction);
     emit_byte(0xff);
     emit_byte(0xff);
-    return m_chunk->size() - 2;
+    return m_function->chunk->size() - 2;
 }
 
 void Compiler::patch_jump(int offset) {
     // -2 to adjust for the bytecode for the jump offset itself.
-    int jump = m_chunk->size() - offset - 2;
+    int jump = m_function->chunk->size() - offset - 2;
 
     if (jump > UINT16_MAX) {
         error("Too much code to jump over.");
     }
 
     // high byte
-    m_chunk->write_byte_at(offset, (jump >> 8) & 0xff);
+    m_function->chunk->write_byte_at(offset, (jump >> 8) & 0xff);
     // low byte
-    m_chunk->write_byte_at(offset + 1, jump & 0xff);
+    m_function->chunk->write_byte_at(offset + 1, jump & 0xff);
 }
 
 bool Compiler::match(token::TokenType token_type) {
@@ -289,21 +297,20 @@ void Compiler::for_statement() {
         expression_statement();
     }
 
-    int loop_start = m_chunk->size();
+    int loop_start = m_function->chunk->size();
     int exit_jump = -1;
     if (!match(TokenType::TOKEN_SEMICOLON)) {
         expression();
         consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+        // Jump out of the loop if the condition is false;
+        exit_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
+        emit_byte(OpCode::OP_POP);
     }
-
-    // Jump out of the loop if the condition is false;
-    exit_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
-    emit_byte(OpCode::OP_POP);
 
     if (!match(TokenType::TOKEN_RIGHT_PAREN)) {
         // jump to the body of the for loop
         int body_jump = emit_jump(OpCode::OP_JUMP);
-        int increment_start = m_chunk->size();
+        int increment_start = m_function->chunk->size();
         expression();
         emit_byte(OpCode::OP_POP);
         consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
@@ -367,7 +374,7 @@ void Compiler::if_statement() {
 }
 
 void Compiler::while_statement() {
-    int loop_start = m_chunk->size();
+    int loop_start = m_function->chunk->size();
     consume(TokenType::TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
     expression();
     consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
@@ -569,7 +576,7 @@ void Compiler::parse_precedence(Precedence precedence) {
 }
 
 void Compiler::emit_byte(u8 byte) {
-    m_chunk->write_byte(byte, m_parser.m_previous.get_line());
+    m_function->chunk->write_byte(byte, m_parser.m_previous.get_line());
 }
 
 void Compiler::emit_bytes(u8 byte_1, u8 byte_2) {
@@ -588,7 +595,7 @@ void Compiler::emit_return() {
 void Compiler::emit_loop(int loop_start) {
     emit_byte(OpCode::OP_LOOP);
 
-    int offset = m_chunk->size() - loop_start + 2;
+    int offset = m_function->chunk->size() - loop_start + 2;
     if (offset > UINT16_MAX) {
         error("Loop body too large.");
     }
@@ -597,18 +604,21 @@ void Compiler::emit_loop(int loop_start) {
     emit_byte(offset & 0xff);
 }
 
-void Compiler::end_compilation() {
+std::shared_ptr<FunctionObject> Compiler::end_compilation() {
     emit_return();
+    auto function = m_function;
 
 #ifdef DEBUG_PRINT_CODE
     if (!m_parser.m_had_error) {
-        disassemble_chunk(*m_chunk, "code");
+        disassemble_chunk(current_chunk(), function->name != nullptr ? function->name->to_string() : "<script>");
     }
 #endif
+
+    return function;
 }
 
 u8 Compiler::make_constant(std::shared_ptr<object::Object> value) {
-    usize constant_idx = m_chunk->write_constant(std::move(value));
+    usize constant_idx = m_function->chunk->write_constant(std::move(value));
     if (constant_idx > UINT8_MAX) {
         error("Too many constants in one chunk.");
         return 0;

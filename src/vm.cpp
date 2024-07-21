@@ -16,6 +16,14 @@ using namespace object;
 
 namespace vm {
 
+VirtualMachine::VirtualMachine()
+    : m_chunk{nullptr},
+      m_ip{0},
+      m_strings{},
+      m_globals{},
+      m_stack_top{0},
+      m_stack{} {}
+
 VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
     : m_chunk{std::move(chunk)},
       m_ip{0},

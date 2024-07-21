@@ -51,9 +51,9 @@ struct ParseRule {
 
 class Compiler {
 public:
-    Compiler(std::shared_ptr<scanner::Scanner> scanner, std::shared_ptr<chunk::Chunk> chunk);
+    Compiler(std::shared_ptr<scanner::Scanner> scanner, object::FunctionType type);
 
-    bool compile();
+    std::shared_ptr<object::FunctionObject> compile();
 
 private:
     void advance();
@@ -104,7 +104,7 @@ private:
     void emit_bytes(u8 byte_1, u8 byte_2);
     void emit_constant(std::shared_ptr<object::Object> value);
     void emit_return();
-    void end_compilation();
+    std::shared_ptr<object::FunctionObject> end_compilation();
     void emit_loop(int loop_start);
     u8 make_constant(std::shared_ptr<object::Object> value);
 
@@ -112,12 +112,14 @@ private:
     void error(const std::string& message);
     void error_at(const token::Token& token, const std::string& message);
 
+    const chunk::Chunk& current_chunk() const;
+
     Parser m_parser;
     std::array<Local, UINT8_COUNT> m_locals;
     int m_local_count;
     int m_scope_depth;
     std::shared_ptr<scanner::Scanner> m_scanner;
-    std::shared_ptr<chunk::Chunk> m_chunk;
+    std::shared_ptr<object::FunctionObject> m_function;
 
     std::unordered_map<token::TokenType, ParseRule> m_rules{
         {token::TokenType::TOKEN_LEFT_PAREN, {std::bind(&Compiler::grouping, this, std::placeholders::_1), std::nullopt, Precedence::PREC_NONE}},

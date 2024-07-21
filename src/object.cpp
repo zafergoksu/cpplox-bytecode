@@ -1,8 +1,10 @@
 #include "object.h"
+#include "chunk.h"
 #include "common.h"
 #include <string>
 
 using namespace object;
+using namespace chunk;
 
 Object::Object() : type(ObjectType::OBJ_EMPTY) {}
 Object::Object(const Object& object) : type(object.type) {}
@@ -122,6 +124,36 @@ bool StringObject::is_equal(const Object& other) const {
         const auto& obj = static_cast<const StringObject&>(other);
         return obj.value == value;
     }
+    return false;
+}
+
+FunctionObject::FunctionObject(int arity, FunctionType func_type, std::shared_ptr<Chunk> chunk, std::shared_ptr<StringObject> name)
+    : arity{arity},
+      func_type{func_type},
+      chunk{std::move(chunk)},
+      name{std::move(name)} {}
+
+std::string FunctionObject::to_string() const {
+    if (name == nullptr) {
+        return "<script>";
+    }
+    return "<function '" + name->to_string() + "'>";
+}
+
+bool FunctionObject::is_falsey() const {
+    return false;
+}
+
+bool FunctionObject::is_truthy() const {
+    return true;
+}
+
+bool FunctionObject::is_equal(const Object& other) const {
+    if (other.type == type) {
+        const auto& obj = static_cast<const FunctionObject&>(other);
+        return obj.arity == arity && obj.chunk == chunk && obj.name == name && obj.name->to_string() == name->to_string();
+    }
+
     return false;
 }
 

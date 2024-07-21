@@ -1,5 +1,6 @@
 #pragma once
 
+#include "chunk.h"
 #include "common.h"
 #include <string>
 
@@ -11,6 +12,11 @@ enum class ObjectType {
     OBJ_NUMBER,
     OBJ_BOOLEAN,
     OBJ_STRING
+};
+
+enum class FunctionType {
+    TYPE_FUNCTION,
+    TYPE_SCRIPT
 };
 
 struct Object {
@@ -81,14 +87,18 @@ struct StringObject : public Object {
     u32 hash;
 };
 
-/*
- * TODO(zafergoksu):
- *  - make sure to implement these functions
- *  - move print visitor and others from value.h to here
- *  - refactor value array
- *  - refactor vm to not use `std::holds_alternative`
- *  - refactor table.h a bit with new string object
- *  - fix tests
-*/
+struct FunctionObject : public Object {
+    FunctionObject(int arity, FunctionType func_type, std::shared_ptr<chunk::Chunk> chunk, std::shared_ptr<StringObject> name);
+
+    std::string to_string() const override;
+    bool is_falsey() const override;
+    bool is_truthy() const override;
+    bool is_equal(const Object& other) const override;
+
+    int arity;
+    FunctionType func_type;
+    std::shared_ptr<chunk::Chunk> chunk;
+    std::shared_ptr<StringObject> name;
+};
 
 } // namespace object
