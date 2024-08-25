@@ -263,7 +263,7 @@ inline InterpretResult VirtualMachine::pop_binary_operands(double& out_lhs, doub
         return INTERPRET_RUNTIME_ERROR;
     }
 
-    if (!(lhs->type == ObjectType::OBJ_NUMBER) || !(rhs->type == ObjectType::OBJ_NUMBER)) {
+    if (lhs->type != ObjectType::OBJ_NUMBER || rhs->type != ObjectType::OBJ_NUMBER) {
         runtime_error("Operands must be numbers.");
         return INTERPRET_RUNTIME_ERROR;
     }
