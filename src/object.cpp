@@ -7,7 +7,6 @@ using namespace object;
 using namespace chunk;
 
 Object::Object() : type(ObjectType::OBJ_EMPTY) {}
-Object::Object(const Object& object) : type(object.type) {}
 Object::Object(ObjectType type) : type(type) {}
 
 std::string Object::to_string() const {

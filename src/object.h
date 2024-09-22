@@ -21,7 +21,6 @@ enum class FunctionType {
 
 struct Object {
     Object();
-    Object(const Object& obj);
     Object(const ObjectType type);
 
     virtual std::string to_string() const;
