@@ -27,8 +27,14 @@ struct Object {
     virtual bool is_falsey() const;
     virtual bool is_truthy() const;
     virtual bool is_equal(const Object& other) const;
-    inline bool is_numeric() const;
-    inline bool is_string() const;
+
+    inline bool is_numeric() const {
+        return type == ObjectType::OBJ_NUMBER;
+    }
+
+    inline bool is_string() const {
+        return type == ObjectType::OBJ_STRING;
+    }
 
 protected:
     friend bool operator==(const Object& lhs, const Object& rhs);

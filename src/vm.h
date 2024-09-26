@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "table.h"
+#include "utility.h"
 #include "value.h"
 
 #include <array>
@@ -43,14 +44,101 @@ private:
     std::shared_ptr<object::Object> pop();
     void runtime_error(const std::string& message);
 
-    inline void concatenate();
-    inline InterpretResult pop_binary_operands(double& lhs, double& rhs);
-    inline InterpretResult binary_add_op();
-    inline InterpretResult binary_subtract_op();
-    inline InterpretResult binary_multiply_op();
-    inline InterpretResult binary_divide_op();
-    inline InterpretResult binary_greater_op();
-    inline InterpretResult binary_less_op();
+    inline void concatenate() {
+        auto rhs = pop();
+        auto lhs = pop();
+
+        std::string new_string = lhs->to_string() + rhs->to_string();
+        push(value::make_obj_string_interned(m_strings, std::move(new_string)));
+    }
+
+    inline InterpretResult pop_binary_operands(double& out_lhs, double& out_rhs) {
+        const auto rhs = pop();
+        const auto lhs = pop();
+
+        if (lhs == nullptr || rhs == nullptr) {
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        if (lhs->type != object::ObjectType::OBJ_NUMBER || rhs->type != object::ObjectType::OBJ_NUMBER) {
+            runtime_error("Operands must be numbers.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        out_lhs = std::static_pointer_cast<object::NumberObject>(lhs)->value;
+        out_rhs = std::static_pointer_cast<object::NumberObject>(rhs)->value;
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_add_op() {
+        double lhs = 0;
+        double rhs = 0;
+
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+
+        push(std::make_shared<object::NumberObject>(lhs + rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_subtract_op() {
+        double lhs = 0;
+        double rhs = 0;
+
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+
+        push(std::make_shared<object::NumberObject>(lhs - rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_multiply_op() {
+        double lhs = 0;
+        double rhs = 0;
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+        push(std::make_shared<object::NumberObject>(lhs * rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_divide_op() {
+        double lhs = 0;
+        double rhs = 0;
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+        push(std::make_shared<object::NumberObject>(lhs / rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_greater_op() {
+        double lhs = 0;
+        double rhs = 0;
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+        push(std::make_shared<object::BooleanObject>(lhs > rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_less_op() {
+        double lhs = 0;
+        double rhs = 0;
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+        push(std::make_shared<object::BooleanObject>(lhs < rhs));
+        return INTERPRET_OK;
+    }
 
     std::shared_ptr<const chunk::Chunk> m_chunk;
     usize m_ip;

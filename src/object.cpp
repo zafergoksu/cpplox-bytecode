@@ -25,14 +25,6 @@ bool Object::is_equal(const Object& other) const {
     return true;
 }
 
-bool Object::is_numeric() const {
-    return type == ObjectType::OBJ_NUMBER;
-}
-
-bool Object::is_string() const {
-    return type == ObjectType::OBJ_STRING;
-}
-
 bool operator==(const Object& lhs, const Object& rhs) {
     return lhs.type == rhs.type && lhs.is_equal(rhs);
 }
