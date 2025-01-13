@@ -103,6 +103,8 @@ void Compiler::mark_initialized() {
 }
 
 u8 Compiler::identifier_constant(const token::Token& token) {
+    // TODO(zgoksu): probably move these objects into a heap object
+    // to manually manage the memory for garbage collection
     auto obj_string = std::make_shared<object::StringObject>(token.get_lexeme());
     return make_constant(std::move(obj_string));
 }

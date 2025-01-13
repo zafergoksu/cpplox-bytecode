@@ -121,6 +121,10 @@ private:
     std::shared_ptr<scanner::Scanner> m_scanner;
     std::shared_ptr<object::FunctionObject> m_function;
 
+    // TODO(zgoksu): this doesn't need to be map. we can use enum class with inherited std::size_t so that
+    // each enum is sequentially index. then use an array.
+    // Extract out these into a struct. Elements - token type and parse rule
+    // parse rule is a struct with prefix, infix and precedence
     std::unordered_map<token::TokenType, ParseRule> m_rules{
         {token::TokenType::TOKEN_LEFT_PAREN, {std::bind(&Compiler::grouping, this, std::placeholders::_1), std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_RIGHT_PAREN, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
