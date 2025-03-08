@@ -2,16 +2,19 @@
 #include "common.h"
 #include "object.h"
 #include "value.h"
-#include <memory>
 #include <string>
 
 using namespace value;
 using namespace object;
 
 namespace table {
+
+Entry::Entry()
+    : key{nullptr}, value{nullptr} {}
+
 Table::Table() : m_entries{k_initial_capacity} {}
 
-bool Table::set(std::shared_ptr<StringObject> key, std::shared_ptr<Object> value) {
+bool Table::set(StringObject* key, Object* value) {
     Entry* entry = find_entry(key);
     bool is_new_key = entry->key == nullptr;
     entry->key = key;
@@ -19,21 +22,20 @@ bool Table::set(std::shared_ptr<StringObject> key, std::shared_ptr<Object> value
     return is_new_key;
 }
 
-bool Table::get(std::shared_ptr<StringObject> key, std::shared_ptr<Object>& value) {
+Object* Table::get(StringObject* key) {
     if (m_entries.size() == 0) {
-        return false;
+        return nullptr;
     }
 
     Entry* entry = find_entry(key);
     if (!entry->key) {
-        return false;
+        return nullptr;
     }
 
-    value = entry->value;
-    return true;
+    return entry->value;
 }
 
-bool Table::del(std::shared_ptr<StringObject> key) {
+bool Table::del(StringObject* key) {
     if (m_entries.size() == 0) {
         return false;
     }
@@ -49,7 +51,7 @@ bool Table::del(std::shared_ptr<StringObject> key) {
     // a tombstone allows us to continue linear probing until we find the latest collided value
 
     entry->key = nullptr;
-    entry->value = std::make_shared<BooleanObject>(true);
+    entry->value = new BooleanObject{true};
     return true;
 }
 
@@ -62,7 +64,7 @@ void Table::add_all(Table& to) {
     }
 }
 
-Entry* Table::find_entry(std::shared_ptr<StringObject> key) {
+Entry* Table::find_entry(StringObject* key) {
     auto capacity = m_entries.capacity();
     u32 index = key->hash % capacity;
     Entry* tombstone = nullptr;
@@ -88,7 +90,7 @@ Entry* Table::find_entry(std::shared_ptr<StringObject> key) {
     }
 }
 
-std::shared_ptr<StringObject> Table::find_string(const std::string& value, u32 hash) {
+StringObject* Table::find_string(const std::string& value, u32 hash) {
     if (m_entries.size() == 0) {
         return nullptr;
     }

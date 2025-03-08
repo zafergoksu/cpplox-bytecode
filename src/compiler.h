@@ -2,6 +2,7 @@
 
 #include "chunk.h"
 #include "common.h"
+#include "heap.h"
 #include "object.h"
 #include "scanner.h"
 #include "token.h"
@@ -51,9 +52,11 @@ struct ParseRule {
 
 class Compiler {
 public:
-    Compiler(std::shared_ptr<scanner::Scanner> scanner, object::FunctionType type);
+    Compiler(std::shared_ptr<scanner::Scanner> scanner,
+             std::shared_ptr<ds::Heap> heap,
+             object::FunctionType type);
 
-    std::shared_ptr<object::FunctionObject> compile();
+    object::FunctionObject* compile();
 
 private:
     void advance();
@@ -102,11 +105,11 @@ private:
 
     void emit_byte(u8 byte);
     void emit_bytes(u8 byte_1, u8 byte_2);
-    void emit_constant(std::shared_ptr<object::Object> value);
+    void emit_constant(object::Object* value);
     void emit_return();
-    std::shared_ptr<object::FunctionObject> end_compilation();
+    object::FunctionObject* end_compilation();
     void emit_loop(int loop_start);
-    u8 make_constant(std::shared_ptr<object::Object> value);
+    u8 make_constant(object::Object* value);
 
     void error_at_current(const std::string& message);
     void error(const std::string& message);
@@ -119,7 +122,8 @@ private:
     int m_local_count;
     int m_scope_depth;
     std::shared_ptr<scanner::Scanner> m_scanner;
-    std::shared_ptr<object::FunctionObject> m_function;
+    std::shared_ptr<ds::Heap> m_heap;
+    object::FunctionObject* m_function;
 
     // TODO(zgoksu): this doesn't need to be map. we can use enum class with inherited std::size_t so that
     // each enum is sequentially index. then use an array.

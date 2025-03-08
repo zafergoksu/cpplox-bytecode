@@ -21,25 +21,28 @@ using namespace scanner;
 using namespace value;
 using namespace object;
 
+using ds::Heap;
+
 namespace compiler {
 
 Local::Local()
     : m_name{TokenType::TOKEN_EOF, "", 0},
       m_depth{std::nullopt} {}
 
-Compiler::Compiler(std::shared_ptr<Scanner> scanner, FunctionType type)
+Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Heap> heap, FunctionType type)
     : m_scanner{std::move(scanner)},
+      m_heap{std::move(heap)},
       m_parser{Token{TokenType::TOKEN_EOF, "", 1},
                Token{TokenType::TOKEN_EOF, "", 1},
                false,
                false},
       m_local_count{0},
       m_scope_depth{0},
-      m_function{std::make_shared<FunctionObject>(0, type, std::make_shared<chunk::Chunk>(), nullptr)} {
+      m_function{new FunctionObject{0, type, std::make_shared<chunk::Chunk>(), nullptr}} {
     m_locals[0].m_depth = 0;
 }
 
-std::shared_ptr<FunctionObject> Compiler::compile() {
+FunctionObject* Compiler::compile() {
     advance();
 
     while (!match(TokenType::TOKEN_EOF)) {
@@ -105,8 +108,7 @@ void Compiler::mark_initialized() {
 u8 Compiler::identifier_constant(const token::Token& token) {
     // TODO(zgoksu): probably move these objects into a heap object
     // to manually manage the memory for garbage collection
-    auto obj_string = std::make_shared<object::StringObject>(token.get_lexeme());
-    return make_constant(std::move(obj_string));
+    return make_constant(m_heap->make_obj_string(token.get_lexeme()));
 }
 
 std::optional<u8> Compiler::resolve_local(const Token& name) {
@@ -477,8 +479,7 @@ void Compiler::advance() {
 }
 
 void Compiler::number(bool can_assign) {
-    auto value = std::make_shared<object::NumberObject>(std::stod(m_parser.m_previous.get_lexeme()));
-    emit_constant(std::move(value));
+    emit_constant(new NumberObject{std::stod(m_parser.m_previous.get_lexeme())});
 }
 
 void Compiler::literal(bool can_assign) {
@@ -500,7 +501,7 @@ void Compiler::literal(bool can_assign) {
 
 void Compiler::string(bool can_assign) {
     std::string str = m_parser.m_previous.get_lexeme().substr(1, m_parser.m_previous.get_lexeme().length() - 2);
-    emit_constant(std::make_shared<object::StringObject>(std::move(str)));
+    emit_constant(m_heap->make_obj_string(std::move(str)));
 }
 
 void Compiler::variable(bool can_assign) {
@@ -586,8 +587,8 @@ void Compiler::emit_bytes(u8 byte_1, u8 byte_2) {
     emit_byte(byte_2);
 }
 
-void Compiler::emit_constant(std::shared_ptr<object::Object> value) {
-    emit_bytes(OpCode::OP_CONSTANT, make_constant(std::move(value)));
+void Compiler::emit_constant(object::Object* value) {
+    emit_bytes(OpCode::OP_CONSTANT, make_constant(value));
 }
 
 void Compiler::emit_return() {
@@ -606,7 +607,7 @@ void Compiler::emit_loop(int loop_start) {
     emit_byte(offset & 0xff);
 }
 
-std::shared_ptr<FunctionObject> Compiler::end_compilation() {
+FunctionObject* Compiler::end_compilation() {
     emit_return();
     auto function = m_function;
 
@@ -619,8 +620,8 @@ std::shared_ptr<FunctionObject> Compiler::end_compilation() {
     return function;
 }
 
-u8 Compiler::make_constant(std::shared_ptr<object::Object> value) {
-    usize constant_idx = m_function->chunk->write_constant(std::move(value));
+u8 Compiler::make_constant(object::Object* value) {
+    usize constant_idx = m_function->chunk->write_constant(value);
     if (constant_idx > UINT8_MAX) {
         error("Too many constants in one chunk.");
         return 0;

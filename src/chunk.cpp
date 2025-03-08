@@ -25,7 +25,7 @@ const std::vector<u8>& Chunk::get_code() const {
     return m_code;
 }
 
-usize Chunk::write_constant(std::shared_ptr<Object> value) {
+usize Chunk::write_constant(Object* value) {
     m_constants.write_value(value);
     return m_constants.get_values().size() - 1;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "heap.h"
 #include "table.h"
 #include "value.h"
 
@@ -26,21 +27,22 @@ enum InterpretResult {
 class VirtualMachine {
 public:
     VirtualMachine();
-    explicit VirtualMachine(std::unique_ptr<chunk::Chunk> chunk);
+    VirtualMachine(std::unique_ptr<chunk::Chunk> chunk, std::shared_ptr<ds::Heap> heap);
     InterpretResult run();
     InterpretResult run_step();
     [[nodiscard]] usize get_ip() const;
-    void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk);
-    std::shared_ptr<object::Object> peek_stack_top() const;
-    std::shared_ptr<object::Object> peek(usize n) const;
+    // TODO(zgoksu): consider ownership
+    void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk, std::shared_ptr<ds::Heap> heap);
+    object::Object* peek_stack_top() const;
+    object::Object* peek(usize n) const;
     void reset();
 
 private:
     u8 read_byte();
     u16 read_short();
-    std::shared_ptr<object::Object> read_constant();
-    void push(std::shared_ptr<object::Object> value);
-    std::shared_ptr<object::Object> pop();
+    object::Object* read_constant();
+    void push(object::Object* value);
+    object::Object* pop();
     void runtime_error(const std::string& message);
 
     inline void concatenate() {
@@ -48,7 +50,7 @@ private:
         auto lhs = pop();
 
         std::string new_string = lhs->to_string() + rhs->to_string();
-        push(value::make_obj_string_interned(m_strings, std::move(new_string)));
+        push(m_heap->make_obj_string(std::move(new_string)));
     }
 
     inline InterpretResult pop_binary_operands(double& out_lhs, double& out_rhs) {
@@ -64,8 +66,8 @@ private:
             return INTERPRET_RUNTIME_ERROR;
         }
 
-        out_lhs = std::static_pointer_cast<object::NumberObject>(lhs)->value;
-        out_rhs = std::static_pointer_cast<object::NumberObject>(rhs)->value;
+        out_lhs = static_cast<object::NumberObject*>(lhs)->value;
+        out_rhs = static_cast<object::NumberObject*>(rhs)->value;
         return INTERPRET_OK;
     }
 
@@ -78,7 +80,7 @@ private:
             return result;
         }
 
-        push(std::make_shared<object::NumberObject>(lhs + rhs));
+        push(new object::NumberObject{lhs + rhs});
         return INTERPRET_OK;
     }
 
@@ -91,7 +93,7 @@ private:
             return result;
         }
 
-        push(std::make_shared<object::NumberObject>(lhs - rhs));
+        push(new object::NumberObject{lhs - rhs});
         return INTERPRET_OK;
     }
 
@@ -102,7 +104,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(std::make_shared<object::NumberObject>(lhs * rhs));
+        push(new object::NumberObject{lhs * rhs});
         return INTERPRET_OK;
     }
 
@@ -113,7 +115,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(std::make_shared<object::NumberObject>(lhs / rhs));
+        push(new object::NumberObject{lhs / rhs});
         return INTERPRET_OK;
     }
 
@@ -124,7 +126,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(std::make_shared<object::BooleanObject>(lhs > rhs));
+        push(new object::BooleanObject{lhs > rhs});
         return INTERPRET_OK;
     }
 
@@ -135,16 +137,16 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(std::make_shared<object::BooleanObject>(lhs < rhs));
+        push(new object::BooleanObject{lhs < rhs});
         return INTERPRET_OK;
     }
 
     std::shared_ptr<const chunk::Chunk> m_chunk;
+    std::shared_ptr<ds::Heap> m_heap;
     usize m_ip;
-    table::Table m_strings;
     table::Table m_globals;
     u8 m_stack_top;
-    std::array<std::shared_ptr<object::Object>, UINT8_COUNT> m_stack;
+    std::array<object::Object*, UINT8_COUNT> m_stack;
 };
 
 } // namespace vm

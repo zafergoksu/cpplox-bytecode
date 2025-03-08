@@ -2,6 +2,7 @@
 #include "chunk.h"
 #include "common.h"
 #include "debug.h"
+#include "heap.h"
 #include "object.h"
 #include "utility.h"
 #include "value.h"
@@ -14,35 +15,38 @@ using namespace chunk;
 using namespace value;
 using namespace object;
 
+using ds::Heap;
+
 namespace vm {
 
 VirtualMachine::VirtualMachine()
     : m_chunk{nullptr},
+      m_heap{nullptr},
       m_ip{0},
-      m_strings{},
       m_globals{},
       m_stack_top{0},
       m_stack{} {}
 
-VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk)
+VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk, std::shared_ptr<Heap> heap)
     : m_chunk{std::move(chunk)},
+      m_heap{std::move(heap)},
       m_ip{0},
-      m_strings{},
       m_globals{},
       m_stack_top{0},
       m_stack{} {}
 
 void VirtualMachine::reset() {
     m_chunk = nullptr;
+    m_heap = nullptr;
     m_ip = 0;
-    m_strings = {};
     m_globals = {};
     m_stack_top = 0;
     m_stack = {};
 }
 
-void VirtualMachine::load_new_chunk(std::shared_ptr<chunk::Chunk> chunk) {
+void VirtualMachine::load_new_chunk(std::shared_ptr<chunk::Chunk> chunk, std::shared_ptr<Heap> heap) {
     m_chunk = std::move(chunk);
+    m_heap = std::move(heap);
     m_ip = 0;
 }
 
@@ -67,18 +71,18 @@ InterpretResult VirtualMachine::run_step() {
     u8 instruction = read_byte();
     switch (instruction) {
     case OpCode::OP_CONSTANT: {
-        std::shared_ptr<Object> constant = read_constant();
+        Object* constant = read_constant();
         push(constant);
         break;
     }
     case OpCode::OP_NIL:
-        push(std::make_shared<NullObject>());
+        push(new NullObject{});
         break;
     case OpCode::OP_TRUE:
-        push(std::make_shared<BooleanObject>(true));
+        push(new BooleanObject{true});
         break;
     case OpCode::OP_FALSE:
-        push(std::make_shared<BooleanObject>(false));
+        push(new BooleanObject{false});
         break;
     case OpCode::OP_POP:
         pop();
@@ -96,9 +100,9 @@ InterpretResult VirtualMachine::run_step() {
         break;
     }
     case OpCode::OP_GET_GLOBAL: {
-        std::shared_ptr<StringObject> name = std::static_pointer_cast<StringObject>(read_constant());
-        std::shared_ptr<Object> value;
-        if (!m_globals.get(name, value)) {
+        StringObject* name = static_cast<StringObject*>(read_constant());
+        Object* value = m_globals.get(name);
+        if (value == nullptr) {
             runtime_error("Undefined variable '" + name->to_string() + "'.");
             return INTERPRET_RUNTIME_ERROR;
         }
@@ -106,13 +110,13 @@ InterpretResult VirtualMachine::run_step() {
         break;
     }
     case OpCode::OP_DEFINE_GLOBAL: {
-        std::shared_ptr<StringObject> name = std::static_pointer_cast<StringObject>(read_constant());
+        auto name = static_cast<StringObject*>(read_constant());
         m_globals.set(name, peek_stack_top());
         pop();
         break;
     }
     case OpCode::OP_SET_GLOBAL: {
-        std::shared_ptr<StringObject> name = std::static_pointer_cast<StringObject>(read_constant());
+        auto name = static_cast<StringObject*>(read_constant());
         // when we set, we haven't defined it before
         if (m_globals.set(name, peek_stack_top())) {
             // delete old value for continuous use in repl
@@ -123,10 +127,10 @@ InterpretResult VirtualMachine::run_step() {
         break;
     }
     case OpCode::OP_EQUAL: {
-        std::shared_ptr<Object> rhs = pop();
-        std::shared_ptr<Object> lhs = pop();
+        Object* rhs = pop();
+        Object* lhs = pop();
         bool result = lhs->is_equal(*rhs);
-        push(std::make_shared<BooleanObject>(result));
+        push(new BooleanObject{result});
         break;
     }
     case OpCode::OP_GREATER:
@@ -136,8 +140,8 @@ InterpretResult VirtualMachine::run_step() {
         binary_less_op();
         break;
     case OpCode::OP_ADD: {
-        std::shared_ptr<Object> stack_top = peek_stack_top();
-        std::shared_ptr<Object> stack_top_prev = peek(1);
+        Object* stack_top = peek_stack_top();
+        Object* stack_top_prev = peek(1);
         if (stack_top == nullptr || stack_top_prev == nullptr) {
             runtime_error("Operands are nil.");
             return INTERPRET_RUNTIME_ERROR;
@@ -162,21 +166,21 @@ InterpretResult VirtualMachine::run_step() {
         binary_divide_op();
         break;
     case OpCode::OP_NOT:
-        push(std::make_shared<BooleanObject>(pop()->is_falsey()));
+        push(new BooleanObject(pop()->is_falsey()));
         break;
     case OpCode::OP_NEGATE: {
-        std::shared_ptr<Object> stack_top = peek_stack_top();
+        Object* stack_top = peek_stack_top();
         if (stack_top != nullptr && stack_top->type != ObjectType::OBJ_NUMBER) {
             runtime_error("Operand must be a number.");
             return INTERPRET_RUNTIME_ERROR;
         }
-        auto value = std::static_pointer_cast<NumberObject>(pop());
-        auto negated_value = std::make_shared<NumberObject>(-value->value);
+        auto value = static_cast<NumberObject*>(pop());
+        auto negated_value = new NumberObject{-value->value};
         push(negated_value);
         break;
     }
     case OpCode::OP_PRINT: {
-        std::shared_ptr<StringObject> value = std::static_pointer_cast<StringObject>(pop());
+        StringObject* value = static_cast<StringObject*>(pop());
         println("{}", value->to_string());
         println("");
         break;
@@ -221,24 +225,24 @@ u16 VirtualMachine::read_short() {
     return (m_chunk->get_code().at(m_ip - 2) << 8) | (m_chunk->get_code().at(m_ip - 1));
 }
 
-std::shared_ptr<Object> VirtualMachine::read_constant() {
+Object* VirtualMachine::read_constant() {
     return m_chunk->get_constants().get_values().at(read_byte());
 }
 
-void VirtualMachine::push(std::shared_ptr<Object> value) {
-    m_stack[m_stack_top] = std::move(value);
+void VirtualMachine::push(Object* value) {
+    m_stack[m_stack_top] = value;
     m_stack_top++;
 }
 
-std::shared_ptr<Object> VirtualMachine::peek_stack_top() const {
+Object* VirtualMachine::peek_stack_top() const {
     return peek(0);
 }
 
-std::shared_ptr<Object> VirtualMachine::peek(usize n) const {
+Object* VirtualMachine::peek(usize n) const {
     return m_stack[m_stack_top - 1 - n];
 }
 
-std::shared_ptr<Object> VirtualMachine::pop() {
+Object* VirtualMachine::pop() {
     m_stack_top--;
     return m_stack[m_stack_top];
 }

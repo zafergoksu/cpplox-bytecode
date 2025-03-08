@@ -2,6 +2,7 @@
 
 #include "chunk.h"
 #include "common.h"
+#include <memory>
 #include <string>
 
 namespace object {

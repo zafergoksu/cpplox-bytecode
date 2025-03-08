@@ -1,6 +1,7 @@
 #include "lox.h"
 #include "chunk.h"
 #include "compiler.h"
+#include "heap.h"
 #include "scanner.h"
 #include "utility.h"
 #include "vm.h"
@@ -15,18 +16,21 @@ using namespace scanner;
 using namespace chunk;
 using namespace object;
 
+using ds::Heap;
+
 namespace lox {
 
 vm::InterpretResult interpret(std::string source, vm::VirtualMachine& vm) {
     auto scanner = std::make_shared<Scanner>(std::move(source));
-    Compiler compiler{scanner, object::FunctionType::TYPE_SCRIPT};
+    auto heap = std::make_shared<Heap>();
+    Compiler compiler{scanner, heap, object::FunctionType::TYPE_SCRIPT};
 
-    std::shared_ptr<FunctionObject> function = compiler.compile();
+    FunctionObject* function = compiler.compile();
     if (function == nullptr) {
         return vm::InterpretResult::INTERPRET_COMPILE_ERROR;
     }
 
-    vm.load_new_chunk(function->chunk);
+    vm.load_new_chunk(function->chunk, heap);
     return vm.run();
 }
 

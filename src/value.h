@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common.h"
-#include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -20,19 +19,17 @@ class StringObject;
 
 namespace value {
 
-std::shared_ptr<object::StringObject> make_obj_string_interned(table::Table& table, std::string value);
-
 std::ostream& operator<<(std::ostream&, const object::Object& value);
 std::string value_to_string(const object::Object& value);
 
 class ValueArray {
 public:
-    [[nodiscard]] usize size() const;
-    void write_value(std::shared_ptr<object::Object> value);
-    [[nodiscard]] const std::vector<std::shared_ptr<object::Object>>& get_values() const;
+    [[nodiscard]] usize size() const noexcept;
+    void write_value(object::Object* value) noexcept;
+    [[nodiscard]] const std::vector<object::Object*>& get_values() const noexcept;
     void clear();
 
 private:
-    std::vector<std::shared_ptr<object::Object>> m_values;
+    std::vector<object::Object*> m_values;
 };
 } // namespace value

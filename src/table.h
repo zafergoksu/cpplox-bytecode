@@ -12,20 +12,22 @@ namespace table {
 // TODO(zgoksu): refactor this to remove shared_ptr
 // for data structures
 struct Entry {
-    std::shared_ptr<object::StringObject> key;
-    std::shared_ptr<object::Object> value;
+    Entry();
+
+    object::StringObject* key;
+    object::Object* value;
 };
 
 class Table {
 public:
     Table();
 
-    bool set(std::shared_ptr<object::StringObject> key, std::shared_ptr<object::Object> value);
-    bool get(std::shared_ptr<object::StringObject> key, std::shared_ptr<object::Object>& value);
-    bool del(std::shared_ptr<object::StringObject> key);
-    std::shared_ptr<object::StringObject> find_string(const std::string& value, u32 hash);
+    bool set(object::StringObject* key, object::Object* value);
+    object::Object* get(object::StringObject* key);
+    bool del(object::StringObject* key);
+    object::StringObject* find_string(const std::string& value, u32 hash);
     void add_all(Table& to);
-    Entry* find_entry(std::shared_ptr<object::StringObject> key);
+    Entry* find_entry(object::StringObject* key);
 
 private:
     static constexpr u32 k_initial_capacity = 8;
