@@ -2,7 +2,6 @@
 
 #include "common.h"
 #include "table.h"
-#include "utility.h"
 #include "value.h"
 
 #include <array>

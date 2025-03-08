@@ -6,7 +6,7 @@ namespace ds {
 
 template<typename T>
 struct Node {
-    T item;
+    T* item;
     Node* next;
 };
 
@@ -70,7 +70,7 @@ public:
         return m_size;
     }
 
-    void insert(const T& item) noexcept {
+    void insert(T* item) noexcept {
         auto new_node = new Node{item, m_head};
         m_head = new_node;
         ++m_size;

@@ -9,6 +9,8 @@
 
 namespace table {
 
+// TODO(zgoksu): refactor this to remove shared_ptr
+// for data structures
 struct Entry {
     std::shared_ptr<object::StringObject> key;
     std::shared_ptr<object::Object> value;
