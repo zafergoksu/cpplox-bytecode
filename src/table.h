@@ -9,8 +9,6 @@
 
 namespace table {
 
-// TODO(zgoksu): refactor this to remove shared_ptr
-// for data structures
 struct Entry {
     Entry();
 
