@@ -33,8 +33,8 @@ public:
     [[nodiscard]] usize get_ip() const;
     // TODO(zgoksu): consider ownership
     void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk, std::shared_ptr<ds::Heap> heap);
-    object::Object* peek_stack_top() const;
-    object::Object* peek(usize n) const;
+    [[nodiscard]] object::Object* peek_stack_top() const;
+    [[nodiscard]] object::Object* peek(usize n) const;
     void reset();
 
 private:
@@ -46,11 +46,11 @@ private:
     void runtime_error(const std::string& message);
 
     inline void concatenate() {
-        auto rhs = pop();
-        auto lhs = pop();
+        const auto rhs = pop();
+        const auto lhs = pop();
 
-        std::string new_string = lhs->to_string() + rhs->to_string();
-        push(m_heap->make_obj_string(std::move(new_string)));
+        const std::string new_string = lhs->to_string() + rhs->to_string();
+        push(m_heap->make_obj_string(new_string));
     }
 
     inline InterpretResult pop_binary_operands(double& out_lhs, double& out_rhs) {
@@ -64,10 +64,17 @@ private:
         if (lhs->type != object::ObjectType::OBJ_NUMBER || rhs->type != object::ObjectType::OBJ_NUMBER) {
             runtime_error("Operands must be numbers.");
             return INTERPRET_RUNTIME_ERROR;
+
         }
 
-        out_lhs = static_cast<object::NumberObject*>(lhs)->value;
-        out_rhs = static_cast<object::NumberObject*>(rhs)->value;
+        const auto lhs_ptr = dynamic_cast<object::NumberObject*>(lhs);
+        const auto rhs_ptr = dynamic_cast<object::NumberObject*>(rhs);
+        if (lhs_ptr == nullptr || rhs_ptr == nullptr) {
+            runtime_error("Operands must be numbers.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        out_lhs = lhs_ptr->value;
+        out_rhs = rhs_ptr->value;
         return INTERPRET_OK;
     }
 

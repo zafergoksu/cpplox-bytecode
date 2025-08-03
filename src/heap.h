@@ -15,7 +15,7 @@ public:
         return obj;
     }
 
-    object::StringObject* make_obj_string(std::string value) noexcept;
+    object::StringObject* make_obj_string(const std::string& value) noexcept;
 
 private:
     ds::List<object::Object> m_objects;
