@@ -13,7 +13,7 @@ build_release:
 test_release:
 	cd build_release/tests && ctest -C Release
 
-full_release: make_release build_release test_debug
+full_release: make_release build_release test_release
 
 clear_debug:
 	rm -rf build_debug
