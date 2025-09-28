@@ -23,6 +23,8 @@ enum class FunctionType {
 struct Object {
     Object();
     Object(const ObjectType type);
+    virtual ~Object();
+    // Test
 
     virtual std::string to_string() const;
     virtual bool is_falsey() const;
