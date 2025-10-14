@@ -105,6 +105,8 @@ struct FunctionObject : public Object {
     int arity;
     FunctionType func_type;
     std::shared_ptr<chunk::Chunk> chunk;
+    // TODO(zgoksu): need to reconsider this shared_ptr (and maybe the chunk)
+    // to be a pointer heap allocated for GC
     std::shared_ptr<StringObject> name;
 };
 

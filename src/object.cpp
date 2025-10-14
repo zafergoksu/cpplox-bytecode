@@ -1,6 +1,7 @@
 #include "object.h"
 #include "chunk.h"
 #include "common.h"
+#include <memory>
 #include <string>
 
 using namespace object;
@@ -68,7 +69,7 @@ bool NumberObject::is_truthy() const {
 
 bool NumberObject::is_equal(const Object& other) const {
     if (other.type == type) {
-        const auto& obj = static_cast<const NumberObject&>(other);
+        const auto& obj = dynamic_cast<const NumberObject&>(other);
         return obj.value == value;
     }
     return false;
@@ -90,7 +91,7 @@ bool BooleanObject::is_truthy() const {
 
 bool BooleanObject::is_equal(const Object& other) const {
     if (other.type == type) {
-        const auto& obj = static_cast<const BooleanObject&>(other);
+        const auto& obj = dynamic_cast<const BooleanObject&>(other);
         return obj.value == value;
     }
     return false;
@@ -112,7 +113,7 @@ bool StringObject::is_truthy() const {
 
 bool StringObject::is_equal(const Object& other) const {
     if (other.type == type) {
-        const auto& obj = static_cast<const StringObject&>(other);
+        const auto& obj = dynamic_cast<const StringObject&>(other);
         return obj.value == value;
     }
     return false;
@@ -141,7 +142,7 @@ bool FunctionObject::is_truthy() const {
 
 bool FunctionObject::is_equal(const Object& other) const {
     if (other.type == type) {
-        const auto& obj = static_cast<const FunctionObject&>(other);
+        const auto& obj = dynamic_cast<const FunctionObject&>(other);
         return obj.arity == arity && obj.chunk == chunk && obj.name == name && obj.name->to_string() == name->to_string();
     }
 
