@@ -14,7 +14,7 @@ TEST(ListTest, empty) {
 }
 
 TEST(ListTest, insert) {
-    auto obj = new StringObject{"hi"};
+    auto* obj = new StringObject{"hi"};
     List<StringObject> str_list;
     str_list.insert(obj);
 

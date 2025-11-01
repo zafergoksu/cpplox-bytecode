@@ -49,6 +49,7 @@ public:
             while (m_head) {
                 auto erase_node = m_head;
                 m_head = m_head->next;
+                delete erase_node->item;
                 delete erase_node;
             }
         }
@@ -90,6 +91,7 @@ public:
                 } else {
                     m_head = node;
                 }
+                delete erase_node->item;
                 delete erase_node;
                 --m_size;
             } else {
