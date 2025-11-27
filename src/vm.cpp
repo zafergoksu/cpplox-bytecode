@@ -55,7 +55,7 @@ InterpretResult VirtualMachine::run() {
     while (m_ip < m_chunk->size()) {
 #ifdef DEBUG_TRACE_EXECUTION
         for (u8 i = 0; i < m_stack_top; i++) {
-            println("\t[ {} ]", m_stack[i]->to_string());
+            println("\t[ {} ]", m_stack.at(i)->to_string());
         }
         disassemble_instruction(*m_chunk, m_ip);
 #endif
