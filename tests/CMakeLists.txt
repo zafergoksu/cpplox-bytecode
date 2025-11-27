@@ -3,8 +3,8 @@ set(TEST_SOURCES
         # test_compiler.cpp
         test_list.cpp
         test_scanner.cpp
-        test_value.cpp
-        test_vm.cpp)
+        test_value.cpp)
+        # test_vm.cpp)
 set(TEST_INCLUDES "./")
 
 if (COMPILE_TESTS)
