@@ -15,11 +15,11 @@ std::string Object::to_string() const {
 }
 
 bool Object::is_falsey() const {
-    return true;
+    return false;
 }
 
 bool Object::is_truthy() const {
-    return false;
+    return true;
 }
 
 bool Object::is_equal(const Object& other) const {
@@ -60,11 +60,11 @@ std::string NumberObject::to_string() const {
 }
 
 bool NumberObject::is_falsey() const {
-    return value == 0;
+    return false;
 }
 
 bool NumberObject::is_truthy() const {
-    return value != 0;
+    return true;
 }
 
 bool NumberObject::is_equal(const Object& other) const {
@@ -104,11 +104,11 @@ std::string StringObject::to_string() const {
 }
 
 bool StringObject::is_falsey() const {
-    return value.empty();
+    return false;
 }
 
 bool StringObject::is_truthy() const {
-    return !value.empty();
+    return true;
 }
 
 bool StringObject::is_equal(const Object& other) const {
