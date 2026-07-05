@@ -64,7 +64,6 @@ private:
         if (lhs->type != object::ObjectType::OBJ_NUMBER || rhs->type != object::ObjectType::OBJ_NUMBER) {
             runtime_error("Operands must be numbers.");
             return INTERPRET_RUNTIME_ERROR;
-
         }
 
         const auto lhs_ptr = dynamic_cast<object::NumberObject*>(lhs);
