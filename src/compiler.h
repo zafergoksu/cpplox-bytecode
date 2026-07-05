@@ -160,7 +160,7 @@ private:
         {token::TokenType::TOKEN_FUN, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_IF, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_NIL, {std::bind(&Compiler::literal, this, std::placeholders::_1), std::nullopt, Precedence::PREC_NONE}},
-        {token::TokenType::TOKEN_OR, {std::nullopt, std::bind(&Compiler::or_infix, this, std::placeholders::_1), Precedence::PREC_NONE}},
+        {token::TokenType::TOKEN_OR, {std::nullopt, std::bind(&Compiler::or_infix, this, std::placeholders::_1), Precedence::PREC_OR}},
         {token::TokenType::TOKEN_PRINT, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_RETURN, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
         {token::TokenType::TOKEN_SUPER, {std::nullopt, std::nullopt, Precedence::PREC_NONE}},
