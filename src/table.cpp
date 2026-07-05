@@ -103,7 +103,7 @@ void Table::adjust_capacity(u32 new_capacity) {
 }
 
 Entry* Table::find_entry(StringObject* key) {
-    auto capacity = m_entries.capacity();
+    auto capacity = m_entries.size();
     u32 index = key->hash % capacity;
     Entry* tombstone = nullptr;
     while (true) {
@@ -133,7 +133,7 @@ StringObject* Table::find_string(const std::string& value, u32 hash) {
         return nullptr;
     }
 
-    u32 index = hash % m_entries.capacity();
+    u32 index = hash % m_entries.size();
 
     while (true) {
         Entry& entry = m_entries[index];
@@ -146,7 +146,7 @@ StringObject* Table::find_string(const std::string& value, u32 hash) {
             return entry.key;
         }
 
-        index = (index + 1) % m_entries.capacity();
+        index = (index + 1) % m_entries.size();
     }
 }
 } // namespace table
