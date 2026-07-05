@@ -651,9 +651,9 @@ void Compiler::error_at(const Token& token, const std::string& message) {
     if (token.get_type() == TokenType::TOKEN_EOF) {
         print_err(" at end");
     } else if (token.get_type() == TokenType::TOKEN_ERROR) {
-
+        // Fallthrough
     } else {
-        print_err(" at {}", token.get_lexeme());
+        print_err(" at '{}'", token.get_lexeme());
     }
 
     println_err(": {}", message);
