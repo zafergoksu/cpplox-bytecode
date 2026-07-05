@@ -76,13 +76,13 @@ InterpretResult VirtualMachine::run_step() {
         break;
     }
     case OpCode::OP_NIL:
-        push(m_heap->make_object<NullObject>());
+        push(m_heap->nil());
         break;
     case OpCode::OP_TRUE:
-        push(m_heap->make_object<BooleanObject>(true));
+        push(m_heap->boolean(true));
         break;
     case OpCode::OP_FALSE:
-        push(m_heap->make_object<BooleanObject>(false));
+        push(m_heap->boolean(false));
         break;
     case OpCode::OP_POP:
         pop();
@@ -166,7 +166,7 @@ InterpretResult VirtualMachine::run_step() {
         binary_divide_op();
         break;
     case OpCode::OP_NOT:
-        push(m_heap->make_object<BooleanObject>(pop()->is_falsey()));
+        push(m_heap->boolean(pop()->is_falsey()));
         break;
     case OpCode::OP_NEGATE: {
         Object* stack_top = peek_stack_top();

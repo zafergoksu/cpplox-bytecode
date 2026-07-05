@@ -133,7 +133,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(m_heap->make_object<object::BooleanObject>(lhs > rhs));
+        push(m_heap->boolean(lhs > rhs));
         return INTERPRET_OK;
     }
 
@@ -144,7 +144,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(m_heap->make_object<object::BooleanObject>(lhs < rhs));
+        push(m_heap->boolean(lhs < rhs));
         return INTERPRET_OK;
     }
 
