@@ -31,7 +31,7 @@ bool operator==(const Object& lhs, const Object& rhs) {
 }
 
 bool operator!=(const Object& lhs, const Object& rhs) {
-    return lhs.type != rhs.type && !lhs.is_equal(rhs);
+    return lhs.type != rhs.type || !lhs.is_equal(rhs);
 }
 
 NullObject::NullObject()
