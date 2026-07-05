@@ -37,7 +37,7 @@ Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Heap> heap,
                false},
       m_local_count{0},
       m_scope_depth{0},
-      m_function{new FunctionObject{0, type, std::make_shared<chunk::Chunk>(), nullptr}} {
+      m_function{m_heap->make_object<FunctionObject>(0, type, std::make_shared<chunk::Chunk>(), nullptr)} {
     m_locals[0].m_depth = 0;
 }
 
@@ -478,7 +478,7 @@ void Compiler::advance() {
 }
 
 void Compiler::number(bool can_assign) {
-    emit_constant(new NumberObject{std::stod(m_parser.m_previous.get_lexeme())});
+    emit_constant(m_heap->make_object<NumberObject>(std::stod(m_parser.m_previous.get_lexeme())));
 }
 
 void Compiler::literal(bool can_assign) {

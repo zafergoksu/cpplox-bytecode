@@ -76,13 +76,13 @@ InterpretResult VirtualMachine::run_step() {
         break;
     }
     case OpCode::OP_NIL:
-        push(new NullObject{});
+        push(m_heap->make_object<NullObject>());
         break;
     case OpCode::OP_TRUE:
-        push(new BooleanObject{true});
+        push(m_heap->make_object<BooleanObject>(true));
         break;
     case OpCode::OP_FALSE:
-        push(new BooleanObject{false});
+        push(m_heap->make_object<BooleanObject>(false));
         break;
     case OpCode::OP_POP:
         pop();
@@ -130,7 +130,7 @@ InterpretResult VirtualMachine::run_step() {
         Object* rhs = pop();
         Object* lhs = pop();
         bool result = lhs->is_equal(*rhs);
-        push(new BooleanObject{result});
+        push(m_heap->make_object<BooleanObject>(result));
         break;
     }
     case OpCode::OP_GREATER:
@@ -166,7 +166,7 @@ InterpretResult VirtualMachine::run_step() {
         binary_divide_op();
         break;
     case OpCode::OP_NOT:
-        push(new BooleanObject(pop()->is_falsey()));
+        push(m_heap->make_object<BooleanObject>(pop()->is_falsey()));
         break;
     case OpCode::OP_NEGATE: {
         Object* stack_top = peek_stack_top();
@@ -175,8 +175,7 @@ InterpretResult VirtualMachine::run_step() {
             return INTERPRET_RUNTIME_ERROR;
         }
         auto value = static_cast<NumberObject*>(pop());
-        auto negated_value = new NumberObject{-value->value};
-        push(negated_value);
+        push(m_heap->make_object<NumberObject>(-value->value));
         break;
     }
     case OpCode::OP_PRINT: {
