@@ -5,7 +5,7 @@
 using ds::Heap;
 using object::StringObject;
 
-StringObject* Heap::make_obj_string(const std::string& value) noexcept {
+StringObject* Heap::make_obj_string(const std::string& value) {
     const u32 hash = StringObject::hash_string(value);
 
     if (StringObject* interned = m_strings.find_string(value, hash); interned != nullptr) {

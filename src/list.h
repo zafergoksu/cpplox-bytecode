@@ -77,7 +77,7 @@ public:
         return m_size;
     }
 
-    void insert(T* item) noexcept {
+    void insert(T* item) {
         auto new_node = new Node{item, m_head};
         m_head = new_node;
         ++m_size;
