@@ -180,9 +180,8 @@ InterpretResult VirtualMachine::run_step() {
         break;
     }
     case OpCode::OP_PRINT: {
-        StringObject* value = static_cast<StringObject*>(pop());
+        Object* value = pop();
         println("{}", value->to_string());
-        println("");
         break;
     }
     case OpCode::OP_JUMP: {
