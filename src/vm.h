@@ -87,7 +87,7 @@ private:
             return result;
         }
 
-        push(new object::NumberObject{lhs + rhs});
+        push(m_heap->make_object<object::NumberObject>(lhs + rhs));
         return INTERPRET_OK;
     }
 
@@ -100,7 +100,7 @@ private:
             return result;
         }
 
-        push(new object::NumberObject{lhs - rhs});
+        push(m_heap->make_object<object::NumberObject>(lhs - rhs));
         return INTERPRET_OK;
     }
 
@@ -111,7 +111,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(new object::NumberObject{lhs * rhs});
+        push(m_heap->make_object<object::NumberObject>(lhs * rhs));
         return INTERPRET_OK;
     }
 
@@ -122,7 +122,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(new object::NumberObject{lhs / rhs});
+        push(m_heap->make_object<object::NumberObject>(lhs / rhs));
         return INTERPRET_OK;
     }
 
@@ -133,7 +133,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(new object::BooleanObject{lhs > rhs});
+        push(m_heap->make_object<object::BooleanObject>(lhs > rhs));
         return INTERPRET_OK;
     }
 
@@ -144,7 +144,7 @@ private:
         if (result != INTERPRET_OK) {
             return result;
         }
-        push(new object::BooleanObject{lhs < rhs});
+        push(m_heap->make_object<object::BooleanObject>(lhs < rhs));
         return INTERPRET_OK;
     }
 
