@@ -120,7 +120,8 @@ bool StringObject::is_equal(const Object& other) const {
 }
 
 FunctionObject::FunctionObject(int arity, FunctionType func_type, std::shared_ptr<Chunk> chunk, std::shared_ptr<StringObject> name)
-    : arity{arity},
+    : Object{ObjectType::OBJ_FUNCTION},
+      arity{arity},
       func_type{func_type},
       chunk{std::move(chunk)},
       name{std::move(name)} {}

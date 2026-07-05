@@ -12,7 +12,8 @@ enum class ObjectType {
     OBJ_NULL,
     OBJ_NUMBER,
     OBJ_BOOLEAN,
-    OBJ_STRING
+    OBJ_STRING,
+    OBJ_FUNCTION
 };
 
 enum class FunctionType {
