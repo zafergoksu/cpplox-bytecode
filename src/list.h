@@ -10,7 +10,7 @@ struct Node {
     Node* next;
 };
 
-template<typename T, bool Owened = true>
+template<typename T, bool Owned = true>
 class List {
 public:
     class iterator : public std::iterator<std::forward_iterator_tag, Node<T>> {
@@ -41,11 +41,11 @@ public:
 
     List(const List&) = delete;
     List(List&&) = delete;
-    List& operator==(const List&) = delete;
-    List& operator==(List&&) = delete;
+    List& operator=(const List&) = delete;
+    List& operator=(List&&) = delete;
 
     ~List() {
-        if constexpr (Owened) {
+        if constexpr (Owned) {
             while (m_head) {
                 auto erase_node = m_head;
                 m_head = m_head->next;
