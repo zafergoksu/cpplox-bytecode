@@ -33,6 +33,7 @@ private:
 
     void adjust_capacity(u32 capacity);
 
+    u32 m_count;
     std::vector<Entry> m_entries;
 };
 } // namespace table

@@ -16,11 +16,22 @@ namespace table {
 Entry::Entry()
     : key{nullptr}, value{nullptr} {}
 
-Table::Table() : m_entries{k_initial_capacity} {}
+Table::Table() : m_count{0}, m_entries{k_initial_capacity} {}
 
 bool Table::set(StringObject* key, Object* value) {
+    if (m_count + 1 > m_entries.size() * k_max_load) {
+        u32 new_capacity = m_entries.size() * 2;
+        adjust_capacity(new_capacity);
+    }
+
     Entry* entry = find_entry(key);
     bool is_new_key = entry->key == nullptr;
+
+    // only increment size not including tombstone
+    if (is_new_key && (entry->value == nullptr || entry->value->type == ObjectType::OBJ_NULL)) {
+        m_count++;
+    }
+
     entry->key = key;
     entry->value = value;
     return is_new_key;
@@ -60,12 +71,35 @@ bool Table::del(StringObject* key) {
 }
 
 void Table::add_all(Table& to) {
-    for (u32 i = 0; i < m_entries.capacity(); i++) {
-        Entry& entry = m_entries[i];
+    for (const Entry& entry : m_entries) {
         if (entry.key != nullptr) {
             to.set(entry.key, entry.value);
         }
     }
+}
+
+void Table::adjust_capacity(u32 new_capacity) {
+    std::vector<Entry> new_entries(new_capacity);
+
+    for (auto& entry : m_entries) {
+        // ignore tombstones
+        if (entry.key == nullptr) {
+            continue;
+        }
+
+        u32 index = entry.key->hash % new_capacity;
+        while (true) {
+            Entry* dest = &new_entries[index];
+            dest->key = entry.key;
+            dest->value = entry.value;
+            m_count++;
+            break;
+        }
+
+        index = (index + 1) % new_capacity;
+    }
+
+    m_entries = std::move(new_entries);
 }
 
 Entry* Table::find_entry(StringObject* key) {
