@@ -13,9 +13,15 @@ struct Node {
 template<typename T, bool Owned = true>
 class List {
 public:
-    class iterator : public std::iterator<std::forward_iterator_tag, Node<T>> {
+    class iterator {
     public:
-        iterator(Node<T>* current) noexcept : m_current{current} {}
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = Node<T>;
+        using difference_type = std::ptrdiff_t;
+        using pointer = Node<T>*;
+        using reference = Node<T>&;
+
+        explicit iterator(Node<T>* current) noexcept : m_current{current} {}
 
         operator Node<T>*() noexcept { return m_current; }
         Node<T>* operator->() noexcept { return m_current; }
