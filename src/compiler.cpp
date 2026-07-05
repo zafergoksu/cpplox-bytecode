@@ -570,7 +570,9 @@ void Compiler::parse_precedence(Precedence precedence) {
         // the previously parse token
         advance();
         std::optional<ParseFn> infix_rule = get_rule(m_parser.m_previous.get_type()).m_infix;
-        (infix_rule.value())(can_assign);
+        if (infix_rule.has_value()) {
+            (infix_rule.value())(can_assign);
+        }
     }
 
     if (can_assign && match(TokenType::TOKEN_EQUAL)) {
