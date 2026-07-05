@@ -7,6 +7,10 @@
 using namespace value;
 using namespace object;
 
+namespace {
+static BooleanObject s_tombstone{true};
+} // namespace
+
 namespace table {
 
 Entry::Entry()
@@ -51,7 +55,7 @@ bool Table::del(StringObject* key) {
     // a tombstone allows us to continue linear probing until we find the latest collided value
 
     entry->key = nullptr;
-    entry->value = new BooleanObject{true};
+    entry->value = &s_tombstone;
     return true;
 }
 
