@@ -119,12 +119,12 @@ bool StringObject::is_equal(const Object& other) const {
     return false;
 }
 
-FunctionObject::FunctionObject(int arity, FunctionType func_type, std::shared_ptr<Chunk> chunk, std::shared_ptr<StringObject> name)
+FunctionObject::FunctionObject(int arity, FunctionType func_type, StringObject* name)
     : Object{ObjectType::OBJ_FUNCTION},
       arity{arity},
       func_type{func_type},
-      chunk{std::move(chunk)},
-      name{std::move(name)} {}
+      chunk{},
+      name{name} {}
 
 std::string FunctionObject::to_string() const {
     if (name == nullptr) {
@@ -142,12 +142,7 @@ bool FunctionObject::is_truthy() const {
 }
 
 bool FunctionObject::is_equal(const Object& other) const {
-    if (other.type == type) {
-        const auto& obj = dynamic_cast<const FunctionObject&>(other);
-        return obj.arity == arity && obj.chunk == chunk && obj.name == name;
-    }
-
-    return false;
+    return this == &other;
 }
 
 /*

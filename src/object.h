@@ -96,7 +96,7 @@ struct StringObject : public Object {
 };
 
 struct FunctionObject : public Object {
-    FunctionObject(int arity, FunctionType func_type, std::shared_ptr<chunk::Chunk> chunk, std::shared_ptr<StringObject> name);
+    FunctionObject(int arity, FunctionType func_type, StringObject* name);
 
     std::string to_string() const override;
     bool is_falsey() const override;
@@ -105,10 +105,8 @@ struct FunctionObject : public Object {
 
     int arity;
     FunctionType func_type;
-    std::shared_ptr<chunk::Chunk> chunk;
-    // TODO(zgoksu): need to reconsider this shared_ptr (and maybe the chunk)
-    // to be a pointer heap allocated for GC
-    std::shared_ptr<StringObject> name;
+    chunk::Chunk chunk;
+    StringObject* name;
 };
 
 } // namespace object

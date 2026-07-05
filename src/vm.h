@@ -27,12 +27,12 @@ enum InterpretResult {
 class VirtualMachine {
 public:
     VirtualMachine();
-    VirtualMachine(std::unique_ptr<chunk::Chunk> chunk, std::shared_ptr<ds::Heap> heap);
+    VirtualMachine(object::FunctionObject* function, std::shared_ptr<ds::Heap> heap);
     InterpretResult run();
     InterpretResult run_step();
     [[nodiscard]] usize get_ip() const;
     // TODO(zgoksu): consider ownership
-    void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk, std::shared_ptr<ds::Heap> heap);
+    void load_function(object::FunctionObject* function, std::shared_ptr<ds::Heap> heap);
     [[nodiscard]] object::Object* peek_stack_top() const;
     [[nodiscard]] object::Object* peek(usize n) const;
     void reset();
@@ -148,7 +148,7 @@ private:
         return INTERPRET_OK;
     }
 
-    std::shared_ptr<const chunk::Chunk> m_chunk;
+    object::FunctionObject* m_function;
     std::shared_ptr<ds::Heap> m_heap;
     usize m_ip;
     table::Table m_globals;

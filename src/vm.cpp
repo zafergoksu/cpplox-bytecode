@@ -20,15 +20,15 @@ using ds::Heap;
 namespace vm {
 
 VirtualMachine::VirtualMachine()
-    : m_chunk{nullptr},
+    : m_function{nullptr},
       m_heap{nullptr},
       m_ip{0},
       m_globals{},
       m_stack_top{0},
       m_stack{} {}
 
-VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk, std::shared_ptr<Heap> heap)
-    : m_chunk{std::move(chunk)},
+VirtualMachine::VirtualMachine(FunctionObject* function, std::shared_ptr<Heap> heap)
+    : m_function{function},
       m_heap{std::move(heap)},
       m_ip{0},
       m_globals{},
@@ -36,7 +36,7 @@ VirtualMachine::VirtualMachine(std::unique_ptr<chunk::Chunk> chunk, std::shared_
       m_stack{} {}
 
 void VirtualMachine::reset() {
-    m_chunk = nullptr;
+    m_function = nullptr;
     m_heap = nullptr;
     m_ip = 0;
     m_globals = {};
@@ -44,20 +44,20 @@ void VirtualMachine::reset() {
     m_stack = {};
 }
 
-void VirtualMachine::load_new_chunk(std::shared_ptr<chunk::Chunk> chunk, std::shared_ptr<Heap> heap) {
-    m_chunk = std::move(chunk);
+void VirtualMachine::load_function(FunctionObject* function, std::shared_ptr<Heap> heap) {
+    m_function = function;
     m_heap = std::move(heap);
     m_ip = 0;
 }
 
 InterpretResult VirtualMachine::run() {
     InterpretResult result = INTERPRET_RUNTIME_ERROR;
-    while (m_ip < m_chunk->size()) {
+    while (m_ip < m_function->chunk.size()) {
 #ifdef DEBUG_TRACE_EXECUTION
         for (u8 i = 0; i < m_stack_top; i++) {
             println("\t[ {} ]", m_stack.at(i)->to_string());
         }
-        disassemble_instruction(*m_chunk, m_ip);
+        disassemble_instruction(m_function->chunk, m_ip);
 #endif
         result = run_step();
         if (result != INTERPRET_OK) {
@@ -215,16 +215,16 @@ usize VirtualMachine::get_ip() const {
 }
 
 u8 VirtualMachine::read_byte() {
-    return m_chunk->get_code().at(m_ip++);
+    return m_function->chunk.get_code().at(m_ip++);
 }
 
 u16 VirtualMachine::read_short() {
     m_ip += 2;
-    return (m_chunk->get_code().at(m_ip - 2) << 8) | (m_chunk->get_code().at(m_ip - 1));
+    return (m_function->chunk.get_code().at(m_ip - 2) << 8) | (m_function->chunk.get_code().at(m_ip - 1));
 }
 
 Object* VirtualMachine::read_constant() {
-    return m_chunk->get_constants().get_values().at(read_byte());
+    return m_function->chunk.get_constants().get_values().at(read_byte());
 }
 
 void VirtualMachine::push(Object* value) {
@@ -247,7 +247,7 @@ Object* VirtualMachine::pop() {
 
 void VirtualMachine::runtime_error(const std::string& message) {
     print_err("{}", message);
-    usize line = m_chunk->get_lines().at(m_ip);
+    usize line = m_function->chunk.get_lines().at(m_ip);
     println_err("[line {}] in script", line);
 }
 

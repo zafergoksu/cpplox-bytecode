@@ -29,7 +29,7 @@ vm::InterpretResult interpret(std::string source, vm::VirtualMachine& vm, const 
         return vm::InterpretResult::INTERPRET_COMPILE_ERROR;
     }
 
-    vm.load_new_chunk(function->chunk, heap);
+    vm.load_function(function, heap);
     return vm.run();
 }
 
