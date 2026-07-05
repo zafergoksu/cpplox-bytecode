@@ -144,7 +144,7 @@ bool FunctionObject::is_truthy() const {
 bool FunctionObject::is_equal(const Object& other) const {
     if (other.type == type) {
         const auto& obj = dynamic_cast<const FunctionObject&>(other);
-        return obj.arity == arity && obj.chunk == chunk && obj.name == name && obj.name->to_string() == name->to_string();
+        return obj.arity == arity && obj.chunk == chunk && obj.name == name;
     }
 
     return false;
