@@ -1,0 +1,42 @@
+name: CI
+
+# Runs on every PR targeting main. Make both jobs required status checks in
+# branch protection (Settings -> Branches) so a PR cannot merge into main
+# until formatting passes and tests are green.
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: |
+          find src tests -type f \
+            \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) -print0 \
+            | xargs -0 --no-run-if-empty clang-format --style=file --dry-run --Werror
+
+  build-and-test:
+    name: build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configure
+        run: cmake --preset release
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Test
+        run: ctest --preset release

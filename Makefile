@@ -1,32 +1,32 @@
-.PHONY: clear_release make_release build_release test_release full_release clear_debug make_debug build_debug test_debug full_debug
+.PHONY: clear_release make_release build_release test_release full_release clear_debug make_debug build_debug test_debug full_debug format_src format_include format_all
 
 clear_release:
-	rm -rf build_release
+	rm -rf build/release
 
 make_release:
-	mkdir -p build_release && cd build_release && cmake .. -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -G Ninja
-	ln -sf build_release/compile_commands.json .
+	cmake --preset release
+	ln -sf build/release/compile_commands.json .
 
 build_release:
-	cd build_release && cmake --build .
+	cmake --build --preset release
 
 test_release:
-	cd build_release/tests && ctest -C Release
+	cd build/release/tests && ctest --output-on-failure
 
-full_release: make_release build_release test_debug
+full_release: make_release build_release test_release
 
 clear_debug:
-	rm -rf build_debug
+	rm -rf build/debug
 
 make_debug:
-	mkdir -p build_debug && cd build_debug && cmake .. -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug -G Ninja
-	ln -sf build_debug/compile_commands.json .
+	cmake --preset debug
+	ln -sf build/debug/compile_commands.json .
 
 build_debug:
-	cd build_debug && cmake --build .
+	cmake --build --preset debug
 
 test_debug:
-	cd build_debug/tests && ctest -C Debug
+	cd build/debug/tests && ctest --output-on-failure
 
 full_debug: make_debug build_debug test_debug
 

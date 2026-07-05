@@ -18,7 +18,7 @@ usize constant_instruction(const std::string& name, const Chunk& chunk, usize of
     u8 constant = chunk.get_code().at(offset + 1);
     print("{:16s} {:4d} '", name, constant);
 
-    std::shared_ptr<object::Object> value = chunk.get_constants().get_values().at(constant);
+    object::Object* value = chunk.get_constants().get_values().at(constant);
     print("{}", value->to_string());
     println("'");
 

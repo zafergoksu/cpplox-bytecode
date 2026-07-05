@@ -18,6 +18,9 @@ using namespace token;
 using namespace chunk;
 using namespace scanner;
 using namespace value;
+using namespace object;
+
+using ds::Heap;
 
 namespace compiler {
 
@@ -25,29 +28,36 @@ Local::Local()
     : m_name{TokenType::TOKEN_EOF, "", 0},
       m_depth{std::nullopt} {}
 
-Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Chunk> chunk)
+Compiler::Compiler(std::shared_ptr<Scanner> scanner, std::shared_ptr<Heap> heap, FunctionType type)
     : m_scanner{std::move(scanner)},
+      m_heap{std::move(heap)},
       m_parser{Token{TokenType::TOKEN_EOF, "", 1},
                Token{TokenType::TOKEN_EOF, "", 1},
                false,
                false},
       m_local_count{0},
       m_scope_depth{0},
-      m_chunk{std::move(chunk)} {}
+      m_function{m_heap->make_object<FunctionObject>(0, type, nullptr)} {
+    m_locals[0].m_depth = 0;
+}
 
-bool Compiler::compile() {
+FunctionObject* Compiler::compile() {
     advance();
 
     while (!match(TokenType::TOKEN_EOF)) {
         declaration();
     }
 
-    end_compilation();
-    return !m_parser.m_had_error;
+    auto function = end_compilation();
+    return m_parser.m_had_error ? nullptr : function;
 }
 
 const ParseRule& Compiler::get_rule(token::TokenType token_type) {
     return m_rules[token_type];
+}
+
+const Chunk& Compiler::current_chunk() const {
+    return m_function->chunk;
 }
 
 void Compiler::synchronize() {
@@ -95,8 +105,9 @@ void Compiler::mark_initialized() {
 }
 
 u8 Compiler::identifier_constant(const token::Token& token) {
-    auto obj_string = std::make_shared<object::StringObject>(token.get_lexeme());
-    return make_constant(std::move(obj_string));
+    // TODO(zgoksu): probably move these objects into a heap object
+    // to manually manage the memory for garbage collection
+    return make_constant(m_heap->make_obj_string(token.get_lexeme()));
 }
 
 std::optional<u8> Compiler::resolve_local(const Token& name) {
@@ -194,21 +205,21 @@ int Compiler::emit_jump(u8 instruction) {
     emit_byte(instruction);
     emit_byte(0xff);
     emit_byte(0xff);
-    return m_chunk->size() - 2;
+    return m_function->chunk.size() - 2;
 }
 
 void Compiler::patch_jump(int offset) {
     // -2 to adjust for the bytecode for the jump offset itself.
-    int jump = m_chunk->size() - offset - 2;
+    int jump = m_function->chunk.size() - offset - 2;
 
     if (jump > UINT16_MAX) {
         error("Too much code to jump over.");
     }
 
     // high byte
-    m_chunk->write_byte_at(offset, (jump >> 8) & 0xff);
+    m_function->chunk.write_byte_at(offset, (jump >> 8) & 0xff);
     // low byte
-    m_chunk->write_byte_at(offset + 1, jump & 0xff);
+    m_function->chunk.write_byte_at(offset + 1, jump & 0xff);
 }
 
 bool Compiler::match(token::TokenType token_type) {
@@ -289,21 +300,20 @@ void Compiler::for_statement() {
         expression_statement();
     }
 
-    int loop_start = m_chunk->size();
+    int loop_start = m_function->chunk.size();
     int exit_jump = -1;
     if (!match(TokenType::TOKEN_SEMICOLON)) {
         expression();
         consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+        // Jump out of the loop if the condition is false;
+        exit_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
+        emit_byte(OpCode::OP_POP);
     }
-
-    // Jump out of the loop if the condition is false;
-    exit_jump = emit_jump(OpCode::OP_JUMP_IF_FALSE);
-    emit_byte(OpCode::OP_POP);
 
     if (!match(TokenType::TOKEN_RIGHT_PAREN)) {
         // jump to the body of the for loop
         int body_jump = emit_jump(OpCode::OP_JUMP);
-        int increment_start = m_chunk->size();
+        int increment_start = m_function->chunk.size();
         expression();
         emit_byte(OpCode::OP_POP);
         consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
@@ -367,7 +377,7 @@ void Compiler::if_statement() {
 }
 
 void Compiler::while_statement() {
-    int loop_start = m_chunk->size();
+    int loop_start = m_function->chunk.size();
     consume(TokenType::TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
     expression();
     consume(TokenType::TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
@@ -468,8 +478,7 @@ void Compiler::advance() {
 }
 
 void Compiler::number(bool can_assign) {
-    auto value = std::make_shared<object::NumberObject>(std::stod(m_parser.m_previous.get_lexeme()));
-    emit_constant(std::move(value));
+    emit_constant(m_heap->make_object<NumberObject>(std::stod(m_parser.m_previous.get_lexeme())));
 }
 
 void Compiler::literal(bool can_assign) {
@@ -491,7 +500,7 @@ void Compiler::literal(bool can_assign) {
 
 void Compiler::string(bool can_assign) {
     std::string str = m_parser.m_previous.get_lexeme().substr(1, m_parser.m_previous.get_lexeme().length() - 2);
-    emit_constant(std::make_shared<object::StringObject>(std::move(str)));
+    emit_constant(m_heap->make_obj_string(std::move(str)));
 }
 
 void Compiler::variable(bool can_assign) {
@@ -560,7 +569,9 @@ void Compiler::parse_precedence(Precedence precedence) {
         // the previously parse token
         advance();
         std::optional<ParseFn> infix_rule = get_rule(m_parser.m_previous.get_type()).m_infix;
-        (infix_rule.value())(can_assign);
+        if (infix_rule.has_value()) {
+            (infix_rule.value())(can_assign);
+        }
     }
 
     if (can_assign && match(TokenType::TOKEN_EQUAL)) {
@@ -569,7 +580,7 @@ void Compiler::parse_precedence(Precedence precedence) {
 }
 
 void Compiler::emit_byte(u8 byte) {
-    m_chunk->write_byte(byte, m_parser.m_previous.get_line());
+    m_function->chunk.write_byte(byte, m_parser.m_previous.get_line());
 }
 
 void Compiler::emit_bytes(u8 byte_1, u8 byte_2) {
@@ -577,8 +588,8 @@ void Compiler::emit_bytes(u8 byte_1, u8 byte_2) {
     emit_byte(byte_2);
 }
 
-void Compiler::emit_constant(std::shared_ptr<object::Object> value) {
-    emit_bytes(OpCode::OP_CONSTANT, make_constant(std::move(value)));
+void Compiler::emit_constant(object::Object* value) {
+    emit_bytes(OpCode::OP_CONSTANT, make_constant(value));
 }
 
 void Compiler::emit_return() {
@@ -588,7 +599,7 @@ void Compiler::emit_return() {
 void Compiler::emit_loop(int loop_start) {
     emit_byte(OpCode::OP_LOOP);
 
-    int offset = m_chunk->size() - loop_start + 2;
+    int offset = m_function->chunk.size() - loop_start + 2;
     if (offset > UINT16_MAX) {
         error("Loop body too large.");
     }
@@ -597,18 +608,21 @@ void Compiler::emit_loop(int loop_start) {
     emit_byte(offset & 0xff);
 }
 
-void Compiler::end_compilation() {
+FunctionObject* Compiler::end_compilation() {
     emit_return();
+    auto function = m_function;
 
 #ifdef DEBUG_PRINT_CODE
     if (!m_parser.m_had_error) {
-        disassemble_chunk(*m_chunk, "code");
+        disassemble_chunk(current_chunk(), function->name != nullptr ? function->name->to_string() : "<script>");
     }
 #endif
+
+    return function;
 }
 
-u8 Compiler::make_constant(std::shared_ptr<object::Object> value) {
-    usize constant_idx = m_chunk->write_constant(std::move(value));
+u8 Compiler::make_constant(object::Object* value) {
+    usize constant_idx = m_function->chunk.write_constant(value);
     if (constant_idx > UINT8_MAX) {
         error("Too many constants in one chunk.");
         return 0;
@@ -637,9 +651,9 @@ void Compiler::error_at(const Token& token, const std::string& message) {
     if (token.get_type() == TokenType::TOKEN_EOF) {
         print_err(" at end");
     } else if (token.get_type() == TokenType::TOKEN_ERROR) {
-
+        // Fallthrough
     } else {
-        print_err(" at {}", token.get_lexeme());
+        print_err(" at '{}'", token.get_lexeme());
     }
 
     println_err(": {}", message);

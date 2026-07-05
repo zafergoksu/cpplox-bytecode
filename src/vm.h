@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "heap.h"
 #include "table.h"
 #include "value.h"
 
@@ -25,39 +26,133 @@ enum InterpretResult {
 
 class VirtualMachine {
 public:
-    VirtualMachine() = default;
-    explicit VirtualMachine(std::unique_ptr<chunk::Chunk> chunk);
+    VirtualMachine();
+    VirtualMachine(object::FunctionObject* function, std::shared_ptr<ds::Heap> heap);
     InterpretResult run();
     InterpretResult run_step();
     [[nodiscard]] usize get_ip() const;
-    void load_new_chunk(std::shared_ptr<chunk::Chunk> chunk);
-    std::shared_ptr<object::Object> peek_stack_top() const;
-    std::shared_ptr<object::Object> peek(usize n) const;
+    // TODO(zgoksu): consider ownership
+    void load_function(object::FunctionObject* function, std::shared_ptr<ds::Heap> heap);
+    [[nodiscard]] object::Object* peek_stack_top() const;
+    [[nodiscard]] object::Object* peek(usize n) const;
     void reset();
 
 private:
     u8 read_byte();
     u16 read_short();
-    std::shared_ptr<object::Object> read_constant();
-    void push(std::shared_ptr<object::Object> value);
-    std::shared_ptr<object::Object> pop();
+    object::Object* read_constant();
+    void push(object::Object* value);
+    object::Object* pop();
     void runtime_error(const std::string& message);
 
-    inline void concatenate();
-    inline InterpretResult pop_binary_operands(double& lhs, double& rhs);
-    inline InterpretResult binary_add_op();
-    inline InterpretResult binary_subtract_op();
-    inline InterpretResult binary_multiply_op();
-    inline InterpretResult binary_divide_op();
-    inline InterpretResult binary_greater_op();
-    inline InterpretResult binary_less_op();
+    inline void concatenate() {
+        const auto rhs = pop();
+        const auto lhs = pop();
 
-    std::shared_ptr<const chunk::Chunk> m_chunk;
+        const std::string new_string = lhs->to_string() + rhs->to_string();
+        push(m_heap->make_obj_string(new_string));
+    }
+
+    inline InterpretResult pop_binary_operands(double& out_lhs, double& out_rhs) {
+        const auto rhs = pop();
+        const auto lhs = pop();
+
+        if (lhs == nullptr || rhs == nullptr) {
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        if (lhs->type != object::ObjectType::OBJ_NUMBER || rhs->type != object::ObjectType::OBJ_NUMBER) {
+            runtime_error("Operands must be numbers.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        const auto lhs_ptr = dynamic_cast<object::NumberObject*>(lhs);
+        const auto rhs_ptr = dynamic_cast<object::NumberObject*>(rhs);
+        if (lhs_ptr == nullptr || rhs_ptr == nullptr) {
+            runtime_error("Operands must be numbers.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        out_lhs = lhs_ptr->value;
+        out_rhs = rhs_ptr->value;
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_add_op() {
+        double lhs = 0;
+        double rhs = 0;
+
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+
+        push(m_heap->make_object<object::NumberObject>(lhs + rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_subtract_op() {
+        double lhs = 0;
+        double rhs = 0;
+
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+
+        push(m_heap->make_object<object::NumberObject>(lhs - rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_multiply_op() {
+        double lhs = 0;
+        double rhs = 0;
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+        push(m_heap->make_object<object::NumberObject>(lhs * rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_divide_op() {
+        double lhs = 0;
+        double rhs = 0;
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+        push(m_heap->make_object<object::NumberObject>(lhs / rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_greater_op() {
+        double lhs = 0;
+        double rhs = 0;
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+        push(m_heap->boolean(lhs > rhs));
+        return INTERPRET_OK;
+    }
+
+    inline InterpretResult binary_less_op() {
+        double lhs = 0;
+        double rhs = 0;
+        InterpretResult result = pop_binary_operands(lhs, rhs);
+        if (result != INTERPRET_OK) {
+            return result;
+        }
+        push(m_heap->boolean(lhs < rhs));
+        return INTERPRET_OK;
+    }
+
+    object::FunctionObject* m_function;
+    std::shared_ptr<ds::Heap> m_heap;
     usize m_ip;
-    table::Table m_strings;
     table::Table m_globals;
     u8 m_stack_top;
-    std::array<std::shared_ptr<object::Object>, UINT8_COUNT> m_stack;
+    std::array<object::Object*, UINT8_COUNT> m_stack;
 };
 
 } // namespace vm

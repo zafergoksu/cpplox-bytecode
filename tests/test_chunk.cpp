@@ -26,14 +26,16 @@ TEST(Chunk, test_write_byte) {
 TEST(Chunk, test_write_constant) {
     chunk::Chunk chunk;
     double constant_value = 1.23;
-    auto value_to_write = std::make_shared<object::NumberObject>(constant_value);
-    auto constant_idx = chunk.write_constant(value_to_write);
+    // TODO(zgoksu): rethink this ownership
+    auto* value_to_write = new object::NumberObject(constant_value);
+    const auto constant_idx = chunk.write_constant(value_to_write);
     chunk.write_byte(chunk::OpCode::OP_CONSTANT, 123);
     chunk.write_byte(constant_idx, 123);
 
     EXPECT_EQ(constant_idx, 0);
-    auto result = std::static_pointer_cast<object::NumberObject>(chunk.get_constants().get_values().at(constant_idx));
+    const auto* result = dynamic_cast<object::NumberObject*>(chunk.get_constants().get_values().at(constant_idx));
     EXPECT_EQ(result->value, constant_value);
+    delete value_to_write;
 }
 
 int main(int ac, char* av[]) {

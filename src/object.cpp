@@ -1,11 +1,13 @@
 #include "object.h"
+#include "chunk.h"
 #include "common.h"
+#include <memory>
 #include <string>
 
 using namespace object;
+using namespace chunk;
 
 Object::Object() : type(ObjectType::OBJ_EMPTY) {}
-Object::Object(const Object& object) : type(object.type) {}
 Object::Object(ObjectType type) : type(type) {}
 
 std::string Object::to_string() const {
@@ -13,23 +15,15 @@ std::string Object::to_string() const {
 }
 
 bool Object::is_falsey() const {
-    return true;
-}
-
-bool Object::is_truthy() const {
     return false;
 }
 
-bool Object::is_equal(const Object& other) const {
+bool Object::is_truthy() const {
     return true;
 }
 
-bool Object::is_numeric() const {
-    return type == ObjectType::OBJ_NUMBER;
-}
-
-bool Object::is_string() const {
-    return type == ObjectType::OBJ_STRING;
+bool Object::is_equal(const Object& other) const {
+    return false;
 }
 
 bool operator==(const Object& lhs, const Object& rhs) {
@@ -37,7 +31,7 @@ bool operator==(const Object& lhs, const Object& rhs) {
 }
 
 bool operator!=(const Object& lhs, const Object& rhs) {
-    return lhs.type != rhs.type && !lhs.is_equal(rhs);
+    return lhs.type != rhs.type || !lhs.is_equal(rhs);
 }
 
 NullObject::NullObject()
@@ -66,16 +60,16 @@ std::string NumberObject::to_string() const {
 }
 
 bool NumberObject::is_falsey() const {
-    return value == 0;
+    return false;
 }
 
 bool NumberObject::is_truthy() const {
-    return value != 0;
+    return true;
 }
 
 bool NumberObject::is_equal(const Object& other) const {
     if (other.type == type) {
-        const auto& obj = static_cast<const NumberObject&>(other);
+        const auto& obj = dynamic_cast<const NumberObject&>(other);
         return obj.value == value;
     }
     return false;
@@ -97,7 +91,7 @@ bool BooleanObject::is_truthy() const {
 
 bool BooleanObject::is_equal(const Object& other) const {
     if (other.type == type) {
-        const auto& obj = static_cast<const BooleanObject&>(other);
+        const auto& obj = dynamic_cast<const BooleanObject&>(other);
         return obj.value == value;
     }
     return false;
@@ -110,19 +104,45 @@ std::string StringObject::to_string() const {
 }
 
 bool StringObject::is_falsey() const {
-    return value.empty();
+    return false;
 }
 
 bool StringObject::is_truthy() const {
-    return !value.empty();
+    return true;
 }
 
 bool StringObject::is_equal(const Object& other) const {
     if (other.type == type) {
-        const auto& obj = static_cast<const StringObject&>(other);
+        const auto& obj = dynamic_cast<const StringObject&>(other);
         return obj.value == value;
     }
     return false;
+}
+
+FunctionObject::FunctionObject(int arity, FunctionType func_type, StringObject* name)
+    : Object{ObjectType::OBJ_FUNCTION},
+      arity{arity},
+      func_type{func_type},
+      chunk{},
+      name{name} {}
+
+std::string FunctionObject::to_string() const {
+    if (name == nullptr) {
+        return "<script>";
+    }
+    return "<function '" + name->to_string() + "'>";
+}
+
+bool FunctionObject::is_falsey() const {
+    return false;
+}
+
+bool FunctionObject::is_truthy() const {
+    return true;
+}
+
+bool FunctionObject::is_equal(const Object& other) const {
+    return this == &other;
 }
 
 /*

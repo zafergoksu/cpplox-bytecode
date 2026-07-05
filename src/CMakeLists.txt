@@ -3,6 +3,7 @@ set(LIBRARY_HEADERS
         common.h
         compiler.h
         debug.h
+        heap.h
         lox.h
         object.h
         scanner.h
@@ -16,6 +17,7 @@ set(LIBRARY_SOURCES
         chunk.cpp
         compiler.cpp
         debug.cpp
+        heap.cpp
         lox.cpp
         object.cpp
         scanner.cpp
