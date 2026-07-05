@@ -28,7 +28,7 @@ bool Table::set(StringObject* key, Object* value) {
     bool is_new_key = entry->key == nullptr;
 
     // only increment size not including tombstone
-    if (is_new_key && (entry->value == nullptr || entry->value->type == ObjectType::OBJ_NULL)) {
+    if (is_new_key && entry->value == nullptr) {
         m_count++;
     }
 
@@ -109,7 +109,7 @@ Entry* Table::find_entry(StringObject* key) {
     while (true) {
         Entry* entry = &m_entries[index];
         if (entry->key == nullptr) {
-            if (entry->value == nullptr || entry->value->type == ObjectType::OBJ_NULL) {
+            if (entry->value == nullptr) {
                 // This entry is truely empty
                 // return a tombstone slot if we encountered one earlier
                 return tombstone != nullptr ? tombstone : entry;
@@ -139,7 +139,7 @@ StringObject* Table::find_string(const std::string& value, u32 hash) {
         Entry& entry = m_entries[index];
         if (entry.key == nullptr) {
             // Stop if we find an empty non-tombstone entry.
-            if (entry.value == nullptr || entry.value->type == ObjectType::OBJ_NULL) {
+            if (entry.value == nullptr) {
                 return nullptr;
             }
         } else if (entry.key->value.length() && entry.key->hash == hash && entry.key->value == value) {
