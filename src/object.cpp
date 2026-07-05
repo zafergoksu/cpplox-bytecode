@@ -23,7 +23,7 @@ bool Object::is_truthy() const {
 }
 
 bool Object::is_equal(const Object& other) const {
-    return true;
+    return false;
 }
 
 bool operator==(const Object& lhs, const Object& rhs) {
